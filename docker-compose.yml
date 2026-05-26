@@ -1,0 +1,102 @@
+services:
+  mim-inspector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-pipeline-inspector
+    environment:
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+    volumes:
+      - ./mim_pipeline_inspector.py:/app/mim_pipeline_inspector.py:ro
+      - ./app:/app/app:ro
+      - ./payloads:/app/payloads:ro
+      - ./data:/app/data
+    command:
+      - --payload
+      - /app/payloads/mim-demo-001.json
+
+  mim-inspector-local-file:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-pipeline-inspector-local-file
+    profiles: ["local-file"]
+    environment:
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+    volumes:
+      - ./mim_pipeline_inspector.py:/app/mim_pipeline_inspector.py:ro
+      - ./app:/app/app:ro
+      - ./data:/app/data
+    command:
+      - --dataset-uri
+      - /app/data/input/incidents.csv
+      - --output-uri
+      - /app/data/output/inspection.json
+      - --client-size
+      - enterprise
+      - --target-use-case
+      - known_issue_matching
+      - --target-use-case
+      - kba_recommendation
+      - --target-use-case
+      - resolver_group_classification
+      - --target-use-case
+      - validation_recommendation
+
+  mim-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-incident-worker
+    environment:
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+    volumes:
+      - ./mim_incident_worker.py:/app/mim_incident_worker.py:ro
+      - ./app:/app/app:ro
+      - ./payloads:/app/payloads:ro
+      - ./data:/app/data
+    entrypoint:
+      - python
+      - /app/mim_incident_worker.py
+    command:
+      - --incoming-file
+      - /app/payloads/incoming-incident-demo.json
+      - --historical-incidents
+      - /app/data/input/incidents.csv
+      - --resolution-db
+      - /app/data/resolution_db/incident_resolution_steps.jsonl
+      - --output-file
+      - /app/data/output/incoming-incident-analysis.json
+
+  mim-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-mcp-smoke
+    environment:
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+    volumes:
+      - ./app:/app/app:ro
+      - ./payloads:/app/payloads:ro
+      - ./data:/app/data
+    entrypoint:
+      - python
+      - -m
+      - app.mcp.server

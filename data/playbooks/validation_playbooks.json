@@ -1,0 +1,12 @@
+[
+  {
+    "playbook_id": "VAL-AUTH-001",
+    "name": "Authentication Recovery Validation",
+    "checks": [
+      "Run pilot login with test user",
+      "Check IdP logs for failed assertions",
+      "Confirm auth failure metric returns to baseline",
+      "Ask affected business group to confirm recovery"
+    ]
+  }
+]

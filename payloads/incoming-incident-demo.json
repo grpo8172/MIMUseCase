@@ -1,0 +1,10 @@
+{
+  "incident_id": "INC9999",
+  "opened_at": "2026-05-26T05:00:00Z",
+  "service": "Salesforce",
+  "short_description": "Users unable to login",
+  "description": "Large group of users seeing SSO redirect loop after SAML certificate change",
+  "severity": "SEV1",
+  "priority": "P1",
+  "assignment_group": "Unknown"
+}

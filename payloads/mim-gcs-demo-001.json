@@ -1,0 +1,18 @@
+{
+  "job_id": "mim-gcs-demo-001",
+  "dataset_uri": "gs://YOUR_BUCKET/mim/input/incidents.csv",
+  "context": {
+    "domain": "major_incident_management",
+    "client_size": "enterprise",
+    "target_use_cases": [
+      "known_issue_matching",
+      "kba_recommendation",
+      "resolver_group_classification",
+      "validation_recommendation"
+    ],
+    "notes": "GCS-backed run. The payload selects which object is ingested."
+  },
+  "output_uri": "gs://YOUR_BUCKET/mim/output/mim-gcs-demo-001-inspection.json",
+  "max_sample_rows": 5,
+  "llm_enabled": true
+}

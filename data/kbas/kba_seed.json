@@ -1,0 +1,32 @@
+[
+  {
+    "kba_id": "KBA-MIM-001",
+    "title": "Salesforce SSO Authentication Failure After Certificate Rotation",
+    "service": "Salesforce",
+    "category": "Identity and Access Management",
+    "complexity": "major",
+    "symptoms": [
+      "Users unable to log in",
+      "SSO redirect loop",
+      "SAML assertion errors",
+      "Spike in authentication failures"
+    ],
+    "known_causes": [
+      "Expired SAML signing certificate",
+      "Incorrect IdP metadata uploaded to Salesforce",
+      "Certificate rotation not propagated"
+    ],
+    "resolver_group": "IAM Platform Team",
+    "resolution_steps": [
+      "Validate IdP metadata",
+      "Compare active certificate thumbprint",
+      "Upload correct metadata",
+      "Run pilot login test"
+    ],
+    "validation_steps": [
+      "Confirm successful SSO login",
+      "Check failed authentication count returns to baseline",
+      "Confirm business users can access CRM"
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+data/output/
+data/resolution_db/*.jsonl
+
+.env
+*.env
+application_default_credentials.json
+
+.DS_Store
+.vscode/
+.idea/

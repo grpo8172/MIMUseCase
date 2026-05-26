@@ -1,0 +1,4 @@
+incident_id,opened_at,service,short_description,description,severity,priority,assignment_group,kba_id,resolution_notes,validation_steps
+INC0001,2026-05-01T08:30:00Z,Salesforce,Users unable to login,Multiple users report SSO redirect loop after certificate rotation,SEV1,P1,IAM Platform Team,KBA-MIM-001,Updated SAML metadata and activated correct certificate,Confirmed pilot login and auth failure rate returned to baseline
+INC0002,2026-05-02T10:15:00Z,Payments API,API latency spike,Checkout transactions timing out across APAC region,SEV2,P2,Platform Reliability,KBA-MIM-014,Scaled service and cleared queue backlog,Synthetic checkout passed and queue depth returned to normal
+INC0003,2026-05-03T12:45:00Z,Email,Shared mailbox access failure,Small finance team unable to access shared mailbox,SEV3,P3,Messaging Team,KBA-MIM-004,Re-applied mailbox permissions,User confirmed mailbox access restored
