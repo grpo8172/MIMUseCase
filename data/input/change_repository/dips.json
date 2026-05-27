@@ -1,0 +1,82 @@
+[
+  {
+    "dip_id": "DIP-001",
+    "linked_kba_id": "KBA-MIM-001",
+    "title": "Salesforce SAML certificate metadata correction",
+    "service": "Salesforce",
+    "category": "identity_access_management",
+    "risk_level": "medium",
+    "approval_groups": ["IAM Platform Team", "Change Enablement Team"],
+    "target_environment_order": ["uat", "production"],
+    "implementation_steps": [
+      "Confirm active IdP signing certificate fingerprint.",
+      "Compare vendor SAML metadata with approved IdP metadata.",
+      "Apply corrected metadata in UAT.",
+      "Run pilot login validation.",
+      "Request production approval if UAT succeeds."
+    ],
+    "rollback_steps": [
+      "Restore previous vendor metadata snapshot.",
+      "Re-enable previous known-good signing certificate if approved."
+    ],
+    "validation_steps": [
+      "Pilot login succeeds.",
+      "SSO redirect loop no longer occurs.",
+      "Authentication failure rate returns to baseline."
+    ]
+  },
+  {
+    "dip_id": "DIP-002",
+    "linked_kba_id": "KBA-MIM-002",
+    "title": "Vault key or secret reference correction",
+    "service": "Generic Application",
+    "category": "secrets_management",
+    "risk_level": "high",
+    "approval_groups": ["Platform Security Team", "Change Enablement Team"],
+    "target_environment_order": ["uat", "production"],
+    "implementation_steps": [
+      "Compare active secret version in vault with application expected version.",
+      "Validate service account access to required secret path.",
+      "Update UAT application configuration to reference approved key version.",
+      "Restart or redeploy UAT service.",
+      "Promote to production only after validation evidence is attached."
+    ],
+    "rollback_steps": [
+      "Restore previous application secret reference.",
+      "Rollback to previous known-good deployment artifact."
+    ],
+    "validation_steps": [
+      "Service can retrieve secret from vault.",
+      "Dependency authentication succeeds.",
+      "Credential-related errors disappear from logs."
+    ]
+  },
+  {
+    "dip_id": "DIP-003",
+    "linked_kba_id": "KBA-MIM-003",
+    "title": "Change request pipeline failure remediation",
+    "service": "Deployment Pipeline",
+    "category": "change_management",
+    "risk_level": "medium",
+    "approval_groups": ["Change Enablement Team", "Platform Reliability"],
+    "target_environment_order": ["uat", "production"],
+    "implementation_steps": [
+      "Inspect failed pipeline stage and collect error output.",
+      "Map failed stage to the related change request step.",
+      "Classify the failure as test, build, deployment, permission, or runtime.",
+      "Run the failed step in UAT with debug logging.",
+      "Apply the smallest safe fix and rerun the UAT pipeline.",
+      "Attach validation evidence to the change request before production promotion."
+    ],
+    "rollback_steps": [
+      "Stop production promotion if UAT validation fails.",
+      "Rollback to previous deployment artifact if partial deployment occurred."
+    ],
+    "validation_steps": [
+      "Failed pipeline stage passes in UAT.",
+      "Regression tests pass.",
+      "Deployment health checks pass.",
+      "Change request has validation evidence attached."
+    ]
+  }
+]

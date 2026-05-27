@@ -1,0 +1,22 @@
+[
+  {
+    "policy_id": "EXEC-POLICY-UAT-ONLY",
+    "service": "*",
+    "allowed_environments": ["uat"],
+    "allowed_action_types": ["uat_implementation_step"],
+    "requires_human_approval": true,
+    "execution_identity": "mim-executor-uat",
+    "credential_ref": "secret-manager://mim-demo/uat/ansible-runner",
+    "notes": "MVP policy: only approved UAT implementation steps can execute."
+  },
+  {
+    "policy_id": "EXEC-POLICY-SALESFORCE-UAT",
+    "service": "Salesforce",
+    "allowed_environments": ["uat"],
+    "allowed_action_types": ["uat_implementation_step"],
+    "requires_human_approval": true,
+    "execution_identity": "mim-executor-iam-uat",
+    "credential_ref": "secret-manager://mim-demo/uat/iam-ansible-runner",
+    "notes": "Salesforce SSO remediation can be tested only in UAT with IAM approval."
+  }
+]
