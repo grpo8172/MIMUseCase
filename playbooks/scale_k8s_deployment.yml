@@ -1,0 +1,36 @@
+---
+- name: Scale approved Kubernetes deployment
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    target_namespace: "{{ lookup('env', 'TARGET_NAMESPACE') | default('client-a-uat', true) }}"
+    target_deployment: "{{ lookup('env', 'TARGET_DEPLOYMENT') | default('fake-auth-service', true) }}"
+    desired_replicas: "{{ lookup('env', 'DESIRED_REPLICAS') | default('2', true) }}"
+
+  tasks:
+    - name: Scale deployment through Kubernetes API
+      ansible.builtin.command:
+        cmd: >
+          kubectl scale deployment {{ target_deployment }}
+          --replicas={{ desired_replicas }}
+          -n {{ target_namespace }}
+      changed_when: true
+
+    - name: Wait for rollout
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status deployment/{{ target_deployment }}
+          -n {{ target_namespace }}
+          --timeout=120s
+      changed_when: false
+
+    - name: Show pods and node placement
+      ansible.builtin.command:
+        cmd: kubectl get pods -n {{ target_namespace }} -o wide
+      changed_when: false
+      register: pod_output
+
+    - name: Print pod placement
+      ansible.builtin.debug:
+        var: pod_output.stdout_lines
