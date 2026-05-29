@@ -113,6 +113,27 @@ class WorkflowCoordinatorAgent:
         credential_ref = policy.get("credential_ref") if policy else None
         execution_identity = policy.get("execution_identity") if policy else None
 
+        policy_id = policy.get("policy_id") if policy else None
+        gke_cluster = policy.get("gke_cluster") if policy else None
+        gke_namespace = policy.get("gke_namespace") if policy else None
+        kubernetes_service_account = (
+            policy.get("kubernetes_service_account") if policy else None
+        )
+        ansible_inventory = policy.get("ansible_inventory") if policy else None
+        ansible_playbook = policy.get("ansible_playbook") if policy else None
+        allowed_kubernetes_resources = (
+            policy.get("allowed_kubernetes_resources", []) if policy else []
+        )
+        allowed_kubernetes_verbs = (
+            policy.get("allowed_kubernetes_verbs", []) if policy else []
+        )
+        target_deployment = (
+            policy.get("target_deployment", "fake-auth-service")
+            if policy
+            else "fake-auth-service"
+        )
+        desired_replicas = policy.get("desired_replicas", 2) if policy else 2
+
         proposed_actions = []
         for index, step in enumerate(dip.get("implementation_steps", []), start=1):
             proposed_actions.append(
@@ -129,9 +150,18 @@ class WorkflowCoordinatorAgent:
                     "source_dip_id": dip.get("dip_id"),
                     "source_kba_id": dip.get("linked_kba_id"),
                     "approval_groups": dip.get("approval_groups", []),
-                    "credential_ref": credential_ref,
+                    "policy_id": policy_id,
                     "execution_identity": execution_identity,
-                    "policy_id": policy.get("policy_id") if policy else None,
+                    "credential_ref": credential_ref,
+                    "gke_cluster": gke_cluster,
+                    "gke_namespace": gke_namespace,
+                    "kubernetes_service_account": kubernetes_service_account,
+                    "ansible_inventory": ansible_inventory,
+                    "ansible_playbook": ansible_playbook,
+                    "allowed_kubernetes_resources": allowed_kubernetes_resources,
+                    "allowed_kubernetes_verbs": allowed_kubernetes_verbs,
+                    "target_deployment": target_deployment,
+                    "desired_replicas": desired_replicas,
                 }
             )
 
