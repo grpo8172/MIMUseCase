@@ -7,6 +7,13 @@
     "requires_human_approval": true,
     "execution_identity": "mim-executor-uat",
     "credential_ref": "secret-manager://mim-demo/uat/ansible-runner",
+    "gke_cluster": "mim-demo-cluster",
+    "gke_namespace": "mim-uat",
+    "kubernetes_service_account": "mim-executor-ksa",
+    "ansible_inventory": "inventories/uat.ini",
+    "ansible_playbook": "playbooks/apply_approved_k8s_remediation.yml",
+    "allowed_kubernetes_resources": ["deployment", "configmap", "pod"],
+    "allowed_kubernetes_verbs": ["get", "list", "watch", "patch"],
     "notes": "MVP policy: only approved UAT implementation steps can execute."
   },
   {
@@ -17,6 +24,31 @@
     "requires_human_approval": true,
     "execution_identity": "mim-executor-iam-uat",
     "credential_ref": "secret-manager://mim-demo/uat/iam-ansible-runner",
+    "gke_cluster": "mim-demo-cluster",
+    "gke_namespace": "client-a-uat",
+    "kubernetes_service_account": "mim-executor-ksa",
+    "ansible_inventory": "inventories/uat.ini",
+    "ansible_playbook": "playbooks/apply_approved_k8s_remediation.yml",
+    "allowed_kubernetes_resources": ["deployment", "configmap", "pod"],
+    "allowed_kubernetes_verbs": ["get", "list", "watch", "patch"],
     "notes": "Salesforce SSO remediation can be tested only in UAT with IAM approval."
+  },
+  {
+    "policy_id": "EXEC-POLICY-CYBER-UAT",
+    "service": "*",
+    "category": "cyber_application_exploitation",
+    "allowed_environments": ["uat", "investigation", "containment"],
+    "allowed_action_types": ["uat_implementation_step"],
+    "requires_human_approval": true,
+    "execution_identity": "mim-executor-cyber-uat",
+    "credential_ref": "secret-manager://mim-demo/uat/cyber-ansible-runner",
+    "gke_cluster": "mim-demo-cluster",
+    "gke_namespace": "cyber-uat",
+    "kubernetes_service_account": "mim-cyber-executor-ksa",
+    "ansible_inventory": "inventories/cyber_uat.ini",
+    "ansible_playbook": "playbooks/apply_cyber_containment.yml",
+    "allowed_kubernetes_resources": ["deployment", "configmap", "pod", "networkpolicy"],
+    "allowed_kubernetes_verbs": ["get", "list", "watch", "patch", "create"],
+    "notes": "Cyber containment actions require human approval and execute only in the cyber UAT namespace."
   }
 ]
