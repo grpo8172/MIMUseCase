@@ -27,3 +27,14 @@ venv/
 
 # Generated runtime outputs
 data/output/
+
+# Local MongoDB runtime data
+data/mongodb/
+
+# Generated runtime outputs
+data/output/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/

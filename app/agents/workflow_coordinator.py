@@ -14,11 +14,15 @@ class WorkflowCoordinatorAgent:
         self,
         dip_repository: DIPRepository | None = None,
         execution_policy_repository: ExecutionPolicyRepository | None = None,
+        historical_incidents_path: str = "data/input/incidents.csv",
+        resolution_db_path: str = "data/resolution_db/incident_resolution_steps.jsonl",
     ) -> None:
         self.dip_repository = dip_repository or DIPRepository()
         self.execution_policy_repository = (
             execution_policy_repository or ExecutionPolicyRepository()
         )
+        self.historical_incidents_path = historical_incidents_path
+        self.resolution_db_path = resolution_db_path
 
     def create_workflow(self, incident_payload: dict) -> WorkflowState:
         incident_id = incident_payload.get("incident_id") or incident_payload.get("number")
@@ -51,8 +55,8 @@ class WorkflowCoordinatorAgent:
         response = analyse_incident(
             MCPIncidentAnalysisRequest(
                 incident=state.incident.raw,
-                historical_incidents_path="data/input/incidents.csv",
-                resolution_db_path="data/resolution_db/incident_resolution_steps.jsonl",
+                historical_incidents_path=self.historical_incidents_path,
+                resolution_db_path=self.resolution_db_path,
                 similarity_limit=5,
             )
         )

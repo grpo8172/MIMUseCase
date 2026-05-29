@@ -100,3 +100,10 @@ services:
       - python
       - -m
       - app.mcp.server
+  mongodb:
+    image: mongo:7
+    container_name: mim-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db
