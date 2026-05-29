@@ -236,3 +236,74 @@ GKE / Kubernetes policy
 8. Optionally run the approved action with REAL_EXECUTION=true.
 9. Inspect execution logs and validation evidence.
 ```
+## Run API and React frontend locally
+
+Start the FastAPI backend:
+
+```bash
+cd ~/mim-incident-intelligence
+PYTHONPATH=. uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+In a second terminal, start the React/Vite frontend:
+
+```bash
+cd ~/mim-incident-intelligence/frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+Open the frontend on port `5173`.
+
+The frontend calls the API through the Vite proxy. The API must be running on port `8000`.
+
+Useful checks:
+
+```bash
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/options
+```
+
+## Known workflow behaviour
+
+The system does not always create an executable remediation plan. If no matching KBA/DIP is found, it falls back to manual review.
+
+When a matching KBA/DIP and execution policy are available, the workflow can create an approval-gated action plan and execute only the manually approved action.
+
+This is intentional. The workflow is designed to accelerate known or well-matched incident patterns, while safely routing unknown or ambiguous incidents to manual review.
+
+## Run API and React frontend locally
+
+Start the FastAPI backend:
+
+```bash
+cd ~/mim-incident-intelligence
+PYTHONPATH=. uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+In a second terminal, start the React/Vite frontend:
+
+```bash
+cd ~/mim-incident-intelligence/frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+Open the frontend on port `5173`.
+
+The frontend calls the API through the Vite proxy. The API must be running on port `8000`.
+
+Useful checks:
+
+```bash
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/options
+```
+
+## Known workflow behaviour
+
+The system does not always create an executable remediation plan. If no matching KBA/DIP is found, it falls back to manual review.
+
+When a matching KBA/DIP and execution policy are available, the workflow can create an approval-gated action plan and execute only the manually approved action.
+
+This is intentional. The workflow is designed to accelerate known or well-matched incident patterns, while safely routing unknown or ambiguous incidents to manual review.
