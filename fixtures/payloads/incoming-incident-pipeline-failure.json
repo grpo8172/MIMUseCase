@@ -1,0 +1,10 @@
+{
+  "incident_id": "INC1001",
+  "opened_at": "2026-05-29T08:05:07.978963+00:00",
+  "service": "Deployment Pipeline",
+  "short_description": "Change request pipeline failed",
+  "description": "Change request pipeline failed during UAT deployment",
+  "severity": "SEV2",
+  "priority": "P2",
+  "assignment_group": "Unknown"
+}

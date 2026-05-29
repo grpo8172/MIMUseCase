@@ -1,0 +1,10 @@
+{
+  "incident_id": "INC1000",
+  "opened_at": "2026-05-29T08:05:07.978633+00:00",
+  "service": "Payments API",
+  "short_description": "Application authentication failures",
+  "description": "401 errors after vault key rotation and stale secret reference",
+  "severity": "SEV2",
+  "priority": "P2",
+  "assignment_group": "Unknown"
+}
