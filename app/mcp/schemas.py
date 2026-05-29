@@ -33,7 +33,7 @@ class MCPIncidentAnalysisRequest(BaseModel):
 
 
 class MCPDatasetInspectionRequest(BaseModel):
-    payload_uri: str = "payloads/mim-demo-001.json"
+    payload_uri: str = "fixtures/payloads/incoming-incident-salesforce-sso.json"
 
 
 class MCPToolResponse(BaseModel):

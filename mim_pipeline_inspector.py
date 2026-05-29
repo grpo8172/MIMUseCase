@@ -47,7 +47,7 @@ Example payload file:
     }
 
 Run with payload:
-    python mim_pipeline_inspector.py --payload ./payloads/mim-demo-001.json
+    python mim_pipeline_inspector.py --payload ./fixtures/payloads/incoming-incident-salesforce-sso.json
 
 Run directly without payload:
     python mim_pipeline_inspector.py \

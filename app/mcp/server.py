@@ -13,7 +13,7 @@ def main() -> None:
     Later this file can become the actual MCP server registration layer.
     """
 
-    demo_path = Path("payloads/incoming-incident-demo.json")
+    demo_path = Path("fixtures/payloads/incoming-incident-salesforce-sso.json")
 
     request = MCPIncidentAnalysisRequest(
         incident=json.loads(demo_path.read_text(encoding="utf-8")),

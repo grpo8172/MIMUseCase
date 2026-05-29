@@ -14,11 +14,11 @@ services:
     volumes:
       - ./mim_pipeline_inspector.py:/app/mim_pipeline_inspector.py:ro
       - ./app:/app/app:ro
-      - ./payloads:/app/payloads:ro
+      - ./fixtures:/app/fixtures:ro
       - ./data:/app/data
     command:
       - --payload
-      - /app/payloads/mim-demo-001.json
+      - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
 
   mim-inspector-local-file:
     build:
@@ -66,14 +66,14 @@ services:
     volumes:
       - ./mim_incident_worker.py:/app/mim_incident_worker.py:ro
       - ./app:/app/app:ro
-      - ./payloads:/app/payloads:ro
+      - ./fixtures:/app/fixtures:ro
       - ./data:/app/data
     entrypoint:
       - python
       - /app/mim_incident_worker.py
     command:
       - --incoming-file
-      - /app/payloads/incoming-incident-demo.json
+      - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
       - --historical-incidents
       - /app/data/input/incidents.csv
       - --resolution-db
@@ -94,7 +94,7 @@ services:
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
     volumes:
       - ./app:/app/app:ro
-      - ./payloads:/app/payloads:ro
+      - ./fixtures:/app/fixtures:ro
       - ./data:/app/data
     entrypoint:
       - python

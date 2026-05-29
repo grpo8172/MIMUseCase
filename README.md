@@ -26,7 +26,7 @@ pip install -r requirements.txt
 ## Run locally
 
 ```bash
-python mim_pipeline_inspector.py --payload payloads/mim-demo-001.json
+python mim_pipeline_inspector.py --payload fixtures/payloads/incoming-incident-salesforce-sso.json
 ```
 
 ## Run with Docker
