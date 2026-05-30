@@ -21,7 +21,7 @@ class GeminiClient:
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str = "GEMINI_MODEL",
         project: str | None = None,
         location: str | None = None,
     ):

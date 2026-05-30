@@ -16,6 +16,7 @@ import os
 
 from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 
+
 app = FastAPI(
     title="MIM Incident Intelligence API",
     description="API wrapper for payload analysis, KBA/DIP retrieval, approval, execution, and validation.",
@@ -146,12 +147,20 @@ def create_workflow(request: CreateWorkflowRequest) -> dict[str, Any]:
     payload = resolve_payload(request)
     dataset_path = resolve_dataset_path(request)
 
+    memory_client = (
+        MongoMCPMemoryClient()
+        if os.getenv("USE_MONGO_MCP", "false").lower() == "true"
+        else None
+    )
+
     coordinator = WorkflowCoordinatorAgent(
         historical_incidents_path=dataset_path,
+        operational_memory_client=memory_client,
     )
 
     state = coordinator.create_workflow(payload)
     state = coordinator.analyse(state)
+    state = coordinator.retrieve_operational_memory(state)
     state = coordinator.retrieve_dip_context(state)
     state = coordinator.create_action_plan(state)
 

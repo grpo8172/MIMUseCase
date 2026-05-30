@@ -92,6 +92,7 @@ services:
     environment:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
     volumes:
       - ./app:/app/app:ro
       - ./fixtures:/app/fixtures:ro
@@ -100,6 +101,7 @@ services:
       - python
       - -m
       - app.mcp.server
+
   mongodb:
     image: mongo:7
     container_name: mim-mongodb

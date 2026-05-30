@@ -205,6 +205,19 @@ class WorkflowCoordinatorAgent:
         )
 
         state.context.matched_change_records.append(memory)
+
+        similar_incidents = memory.get("similar_incidents", [])
+
+        if (
+            not state.analysis.recommended_kba_id
+            and similar_incidents
+            and similar_incidents[0].get("kba_id")
+        ):
+            state.analysis.recommended_kba_id = similar_incidents[0]["kba_id"]
+            state.notes.append(
+                "Applied KBA recommendation from MongoDB MCP operational memory."
+            )
+
         state.notes.append("Retrieved operational memory through MongoDB MCP.")
         state.status = "operational_memory_retrieved"
         return state

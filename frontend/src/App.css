@@ -171,3 +171,17 @@ pre {
     flex-direction: column;
   }
 }
+
+.payloadEditor {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid #d7ddec;
+  border-radius: 12px;
+  padding: 14px;
+  background: #101828;
+  color: #e8edf8;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}

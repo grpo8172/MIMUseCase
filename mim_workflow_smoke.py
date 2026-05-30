@@ -53,14 +53,11 @@ def main() -> None:
 
     state = coordinator.create_workflow(payload)
     state = coordinator.analyse(state)
-
     state = coordinator.retrieve_operational_memory(state)
     state = coordinator.retrieve_dip_context(state)
-
     state = coordinator.create_action_plan(state)
-
+    state = coordinator.create_action_plan(state)
     state = coordinator.approve_action(state, args.approve_action_id)
-
     state = ExecutionAgent().execute_approved_actions(state)
     state = ValidationAgent().validate(state)
 
