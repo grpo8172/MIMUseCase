@@ -337,10 +337,11 @@ This is intentional. The workflow is designed to accelerate known or well-matche
 
 Compose up MongoDB to use MongoDB MCP:
 
+```bash
 cd ~/mim-incident-intelligence
 
 docker compose config --services
 docker compose up -d mongodb
 docker compose ps
-
+```
 
