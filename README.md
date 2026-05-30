@@ -138,6 +138,32 @@ PYTHONPATH=. python scripts/seed_mongo.py
 
 ## Optional: Real GKE execution mode
 
+Check existing clusters:
+```bash
+gcloud container clusters list
+```
+
+Create nodal zones:
+```bash
+gcloud container clusters create mim-demo-cluster \
+  --zone australia-southeast1-a \
+  --num-nodes 1 \
+  --machine-type e2-small \
+  --disk-size 20GB \
+  --enable-ip-alias
+```
+
+Restore kubectl access:
+```bash
+gcloud container clusters get-credentials mim-demo-cluster \
+  --zone australia-southeast1-a
+```
+
+View nodes:
+```bash
+kubectl get nodes
+```
+
 By default, the workflow uses simulated execution. This keeps local tests safe and does not require cloud infrastructure.
 
 To run approved actions against a real GKE cluster, configure `kubectl` first:
@@ -307,3 +333,14 @@ The system does not always create an executable remediation plan. If no matching
 When a matching KBA/DIP and execution policy are available, the workflow can create an approval-gated action plan and execute only the manually approved action.
 
 This is intentional. The workflow is designed to accelerate known or well-matched incident patterns, while safely routing unknown or ambiguous incidents to manual review.
+
+
+Compose up MongoDB to use MongoDB MCP:
+
+cd ~/mim-incident-intelligence
+
+docker compose config --services
+docker compose up -d mongodb
+docker compose ps
+
+

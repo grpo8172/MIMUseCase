@@ -6,6 +6,8 @@ from app.mcp.tools import analyse_incident
 from app.models.resolution import IncidentAnalysisResult
 from app.models.workflow_state import WorkflowIncident, WorkflowState
 from app.io.execution_policy_repository import ExecutionPolicyRepository
+from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
+
 
 class WorkflowCoordinatorAgent:
     """Coordinates MCP-style tools through a shared WorkflowState."""
@@ -14,6 +16,7 @@ class WorkflowCoordinatorAgent:
         self,
         dip_repository: DIPRepository | None = None,
         execution_policy_repository: ExecutionPolicyRepository | None = None,
+        operational_memory_client: MongoMCPMemoryClient | None = None,
         historical_incidents_path: str = "data/input/incidents.csv",
         resolution_db_path: str = "data/resolution_db/incident_resolution_steps.jsonl",
     ) -> None:
@@ -21,6 +24,7 @@ class WorkflowCoordinatorAgent:
         self.execution_policy_repository = (
             execution_policy_repository or ExecutionPolicyRepository()
         )
+        self.operational_memory_client = operational_memory_client
         self.historical_incidents_path = historical_incidents_path
         self.resolution_db_path = resolution_db_path
 
@@ -76,6 +80,8 @@ class WorkflowCoordinatorAgent:
         state.analysis.recommended_resolution_steps = analysis.recommended_resolution_steps
         state.analysis.recommended_validation_steps = analysis.recommended_validation_steps
         state.analysis.decision_reasons = analysis.notes
+
+
         state.status = "incident_analysed"
         return state
 
@@ -184,6 +190,23 @@ class WorkflowCoordinatorAgent:
         state.validation.checks = dip.get("validation_steps", [])
         state.status = "awaiting_approval"
         state.notes.append(f"Created action plan from {dip.get('dip_id')}.")
+        return state
+
+
+    def retrieve_operational_memory(self, state: WorkflowState) -> WorkflowState:
+        if not self.operational_memory_client:
+            state.notes.append("MongoDB MCP memory retrieval not enabled.")
+            return state
+
+        memory = self.operational_memory_client.retrieve_context(
+            service=state.incident.service,
+            symptoms=state.incident.symptoms,
+            description=state.incident.description,
+        )
+
+        state.context.matched_change_records.append(memory)
+        state.notes.append("Retrieved operational memory through MongoDB MCP.")
+        state.status = "operational_memory_retrieved"
         return state
 
     def approve_action(self, state: WorkflowState, action_id: str) -> WorkflowState:

@@ -12,6 +12,9 @@ from app.agents.validation_agent import ValidationAgent
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 from app.models.workflow_state import WorkflowState
 
+import os
+
+from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 
 app = FastAPI(
     title="MIM Incident Intelligence API",
