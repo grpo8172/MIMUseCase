@@ -6,6 +6,8 @@ from typing import Any
 
 from app.models.execution import ExecutionResult
 
+import os
+import subprocess
 
 class PlaybookRunner:
     """Safe demo runner for approved UAT actions."""
@@ -47,6 +49,14 @@ class PlaybookRunner:
             )
             return self._write_log(action, result)
 
+
+        real_execution_enabled = (
+            os.getenv("REAL_EXECUTION", "false").lower() == "true"
+        )
+
+        if real_execution_enabled:
+            return self._run_real_gke_action(action)
+
         stdout = "\n".join(
             [
                 "=== Simulated Ansible UAT Execution ===",
@@ -79,6 +89,103 @@ class PlaybookRunner:
                 "Execution limited to UAT environment.",
             ],
         )
+        return self._write_log(action, result)
+
+    def _run_real_gke_action(
+        self,
+        action: dict[str, Any],
+    ) -> ExecutionResult:
+        action_id = str(action.get("action_id"))
+        action_type = str(action.get("action_type"))
+
+        ansible_playbook = str(action.get("ansible_playbook") or "")
+        ansible_inventory = str(action.get("ansible_inventory") or "")
+        gke_namespace = str(action.get("gke_namespace") or "")
+        target_deployment = str(action.get("target_deployment") or "")
+        desired_replicas = str(action.get("desired_replicas") or "2")
+
+        allowed_playbooks = {
+            "playbooks/scale_k8s_deployment.yml",
+        }
+
+        allowed_namespaces = {
+            "client-a-uat",
+        }
+
+        if ansible_playbook not in allowed_playbooks:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Blocked: Ansible playbook is not whitelisted.",
+                stderr=f"Blocked playbook: {ansible_playbook}",
+                return_code=1,
+            )
+            return self._write_log(action, result)
+
+        if gke_namespace not in allowed_namespaces:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Blocked: Kubernetes namespace is not whitelisted.",
+                stderr=f"Blocked namespace: {gke_namespace}",
+                return_code=1,
+            )
+            return self._write_log(action, result)
+
+        if not Path(ansible_playbook).exists():
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Ansible playbook file was not found.",
+                stderr=f"Missing playbook: {ansible_playbook}",
+                return_code=1,
+            )
+            return self._write_log(action, result)
+
+        env = os.environ.copy()
+        env["TARGET_NAMESPACE"] = gke_namespace
+        env["TARGET_DEPLOYMENT"] = target_deployment
+        env["DESIRED_REPLICAS"] = desired_replicas
+
+        completed = subprocess.run(
+            [
+                "ansible-playbook",
+                "-i",
+                ansible_inventory or "localhost,",
+                ansible_playbook,
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+        result = ExecutionResult(
+            action_id=action_id,
+            action_type=action_type,
+            status="succeeded" if completed.returncode == 0 else "failed",
+            message=(
+                "Approved Ansible/GKE execution completed."
+                if completed.returncode == 0
+                else "Approved Ansible/GKE execution failed."
+            ),
+            stdout=completed.stdout,
+            stderr=completed.stderr,
+            return_code=completed.returncode,
+            evidence=[
+                "Execution mode: real_gke",
+                f"Namespace: {gke_namespace}",
+                f"Deployment: {target_deployment}",
+                f"Desired replicas: {desired_replicas}",
+                f"Playbook: {ansible_playbook}",
+                f"Inventory: {ansible_inventory or 'localhost,'}",
+                "Credential reference remained unresolved in workflow state.",
+            ],
+        )
+
         return self._write_log(action, result)
 
     def _write_log(self, action: dict[str, Any], result: ExecutionResult) -> ExecutionResult:

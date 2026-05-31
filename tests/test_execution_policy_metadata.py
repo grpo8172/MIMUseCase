@@ -35,8 +35,7 @@ def test_salesforce_action_plan_contains_gke_and_ansible_policy_metadata() -> No
     assert action["gke_namespace"] == "client-a-uat"
     assert action["kubernetes_service_account"] == "mim-executor-ksa"
     assert action["ansible_inventory"] == "inventories/uat.ini"
-    assert action["ansible_playbook"] == "playbooks/apply_approved_k8s_remediation.yml"
-
+    assert action["ansible_playbook"] == "playbooks/scale_k8s_deployment.yml"
     assert "deployment" in action["allowed_kubernetes_resources"]
     assert "patch" in action["allowed_kubernetes_verbs"]
 
@@ -75,4 +74,4 @@ def test_default_policy_metadata_is_used_for_unknown_service() -> None:
     assert action["gke_cluster"] == "mim-demo-cluster"
     assert action["gke_namespace"] == "mim-uat"
     assert action["kubernetes_service_account"] == "mim-executor-ksa"
-    assert action["ansible_playbook"] == "playbooks/apply_approved_k8s_remediation.yml"
+    assert action["ansible_playbook"] == "playbooks/scale_k8s_deployment.yml"
