@@ -100,9 +100,19 @@ class PlaybookRunner:
 
         ansible_playbook = str(action.get("ansible_playbook") or "")
         ansible_inventory = str(action.get("ansible_inventory") or "")
+        gke_cluster = str(action.get("gke_cluster") or "")
+        gke_location = str(action.get("gke_location") or "")
         gke_namespace = str(action.get("gke_namespace") or "")
         target_deployment = str(action.get("target_deployment") or "")
         desired_replicas = str(action.get("desired_replicas") or "2")
+
+        allowed_clusters = {
+            "mim-demo-cluster",
+        }
+
+        allowed_locations = {
+            "australia-southeast1-a",
+        }
 
         allowed_playbooks = {
             "playbooks/scale_k8s_deployment.yml",
@@ -111,7 +121,6 @@ class PlaybookRunner:
         allowed_namespaces = {
             "client-a-uat",
         }
-
         if ansible_playbook not in allowed_playbooks:
             result = ExecutionResult(
                 action_id=action_id,
@@ -134,6 +143,28 @@ class PlaybookRunner:
             )
             return self._write_log(action, result)
 
+        if gke_cluster not in allowed_clusters:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Blocked: GKE cluster is not whitelisted.",
+                stderr=f"Blocked cluster: {gke_cluster}",
+                return_code=1,
+            )
+            return self._write_log(action, result)
+
+        if gke_location not in allowed_locations:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Blocked: GKE location is not whitelisted.",
+                stderr=f"Blocked location: {gke_location}",
+                return_code=1,
+            )
+            return self._write_log(action, result)
+
         if not Path(ansible_playbook).exists():
             result = ExecutionResult(
                 action_id=action_id,
@@ -150,6 +181,34 @@ class PlaybookRunner:
         env["TARGET_DEPLOYMENT"] = target_deployment
         env["DESIRED_REPLICAS"] = desired_replicas
 
+        credentials_result = subprocess.run(
+            [
+                "gcloud",
+                "container",
+                "clusters",
+                "get-credentials",
+                gke_cluster,
+                "--zone",
+                gke_location,
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+        if credentials_result.returncode != 0:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Failed to obtain credentials for the approved GKE cluster.",
+                stdout=credentials_result.stdout,
+                stderr=credentials_result.stderr,
+                return_code=credentials_result.returncode,
+            )
+            return self._write_log(action, result)
+
         completed = subprocess.run(
             [
                 "ansible-playbook",
@@ -162,6 +221,7 @@ class PlaybookRunner:
             env=env,
             check=False,
         )
+
 
         result = ExecutionResult(
             action_id=action_id,
@@ -183,6 +243,8 @@ class PlaybookRunner:
                 f"Playbook: {ansible_playbook}",
                 f"Inventory: {ansible_inventory or 'localhost,'}",
                 "Credential reference remained unresolved in workflow state.",
+                f"GKE cluster: {gke_cluster}",
+                f"GKE location: {gke_location}",
             ],
         )
 

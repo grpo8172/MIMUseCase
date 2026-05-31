@@ -1,40 +1,37 @@
+# Python
 __pycache__/
 *.py[cod]
-.venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-
-data/output/
-data/resolution_db/*.jsonl
-
-.env
-*.env
-application_default_credentials.json
-
-.DS_Store
-.vscode/
-.idea/
-
-# Python
-__pycache__/
-*.pyc
-.pytest_cache/
 
 # Virtual environments
 .venv/
 venv/
 
-# Generated runtime outputs
-data/output/
+# Local environment files and credentials
+.env
+.env.*
+*.env
+!.env.example
+application_default_credentials.json
 
-# Local MongoDB runtime data
+# Frontend dependencies
+frontend/node_modules/
+
+# Generated runtime data
+data/output/
+data/resolution_db/*.jsonl
 data/mongodb/
+data/generated/*.csv
 
-# Generated runtime outputs
-data/output/
+# Editor and OS files
+.DS_Store
+.vscode/
+.idea/
 
-# Python cache
-__pycache__/
-*.pyc
-.pytest_cache/
+# Terraform local state
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
