@@ -15,3 +15,6 @@ jsonpatch
 fastapi
 uvicorn
 mcp
+google-cloud-aiplatform[agent_engines,adk]
+google-adk
+httpx

@@ -1,347 +1,240 @@
-# MIM Incident Intelligence
+## Local Demo Runbook
 
-AI-assisted Major Incident Management pipeline for inspecting incident datasets, normalising raw incident/event data, matching known issues, recommending KBAs, retrieving DIPs, producing approval-gated action plans, and validating execution outcomes.
+The MIM demo uses several independent services. Starting MongoDB alone is not enough: the MongoDB MCP server, FastAPI backend, and ADK agent must also be running.
 
-## MVP flow
-
-```text
-Incoming payload
-  -> normalise / inspect incident context
-  -> compare against historical incident memory
-  -> recommend KBA / resolver group
-  -> retrieve linked DIP
-  -> create approval-gated action plan
-  -> execute only manually approved actions
-  -> write execution log and validation evidence
-```
-
-## Repository structure
+### Architecture
 
 ```text
-fixtures/payloads/
-  Static incoming incident payload examples.
+ADK agent / React frontend
+→ FastAPI backend
+→ MongoDB MCP HTTP server
+→ MongoDB container
 
-data/input/
-  Runtime seed data such as incidents, DIPs, and execution policies.
-
-data/generated/
-  Generated or normalised datasets, such as transformed cyber incident memory.
-
-scripts/
-  Dataset generation, normalisation, and MongoDB seeding scripts.
-
-playbooks/
-  Placeholder and real Ansible playbooks for approved execution.
-
-tests/
-  Pytest coverage for payloads, transformed datasets, workflow behaviour, and policy metadata propagation.
+FastAPI approval endpoint
+→ PlaybookRunner
+→ Ansible
+→ GKE control plane
+→ fake-auth-service deployment
 ```
 
-## Local setup
+### Ports
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+| Service              |    Port |
+| -------------------- | ------: |
+| MongoDB              | `27017` |
+| MongoDB MCP server   |  `3000` |
+| FastAPI backend      |  `8000` |
+| ADK web UI, optional |  `8001` |
 
-## Run tests
+---
 
-```bash
-PYTHONPATH=. pytest tests -q
-```
-
-## Run the pipeline inspector locally
-
-```bash
-python mim_pipeline_inspector.py \
-  --payload fixtures/payloads/incoming-incident-salesforce-sso.json
-```
-
-## Run the workflow smoke test
-
-Simulated execution is the default.
-
-```bash
-PYTHONPATH=. python mim_workflow_smoke.py \
-  --payload fixtures/payloads/incoming-incident-salesforce-sso.json \
-  --historical-incidents data/input/incidents.csv \
-  --approve-action-id uat-step-3
-```
-
-## Run the cyber workflow smoke test
-
-First ensure the transformed cyber dataset exists:
-
-```bash
-PYTHONPATH=. python scripts/normalize_cyber_events.py
-```
-
-Then run:
-
-```bash
-PYTHONPATH=. python mim_workflow_smoke.py \
-  --payload fixtures/payloads/incoming-cyber-app-exploit.json \
-  --historical-incidents data/generated/cyber_mim_incidents.csv \
-  --approve-action-id uat-step-3
-```
-
-## Run with Docker
-
-Build the image:
-
-```bash
-docker compose build
-```
-
-Start MongoDB if using local memory storage:
-
-```bash
-docker compose up -d mongodb
-```
-
-Run the inspector container:
-
-```bash
-docker compose run --rm mim-inspector
-```
-
-Run the workflow smoke container:
-
-```bash
-docker compose run --rm mim-workflow
-```
-
-## Optional: MongoDB memory layer
-
-The workflow can use local files for development, but MongoDB is used as the intended operational memory layer for KBAs, DIPs, workflow states, execution metadata, and future incident learnings.
-
-Start local MongoDB:
-
-```bash
-docker compose up -d mongodb
-```
-
-Set environment variables:
-
-```bash
-export MONGODB_URI="mongodb://localhost:27017"
-export MONGODB_DB="mim_incident_intelligence"
-export USE_MONGO=true
-```
-
-Seed MongoDB:
-
-```bash
-PYTHONPATH=. python scripts/seed_mongo.py
-```
-
-## Optional: Real GKE execution mode
-
-Check existing clusters:
-```bash
-gcloud container clusters list
-```
-
-Create nodal zones:
-```bash
-gcloud container clusters create mim-demo-cluster \
-  --zone australia-southeast1-a \
-  --num-nodes 1 \
-  --machine-type e2-small \
-  --disk-size 20GB \
-  --enable-ip-alias
-```
-
-Restore kubectl access:
-```bash
-gcloud container clusters get-credentials mim-demo-cluster \
-  --zone australia-southeast1-a
-```
-
-View nodes:
-```bash
-kubectl get nodes
-```
-
-By default, the workflow uses simulated execution. This keeps local tests safe and does not require cloud infrastructure.
-
-To run approved actions against a real GKE cluster, configure `kubectl` first:
-
-```bash
-gcloud container clusters get-credentials mim-demo-cluster \
-  --zone australia-southeast1-a
-
-kubectl get nodes
-kubectl get pods -n client-a-uat
-```
-
-Create the target namespace and fake service:
-
-```bash
-kubectl create namespace client-a-uat --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl create deployment fake-auth-service \
-  --image=nginx:alpine \
-  --replicas=1 \
-  -n client-a-uat \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
-
-Run the workflow in safe simulated mode:
-
-```bash
-PYTHONPATH=. python mim_workflow_smoke.py \
-  --payload fixtures/payloads/incoming-incident-salesforce-sso.json \
-  --historical-incidents data/input/incidents.csv \
-  --approve-action-id uat-step-3
-```
-
-Run the workflow with real execution enabled:
-
-```bash
-REAL_EXECUTION=true \
-PYTHONPATH=. python mim_workflow_smoke.py \
-  --payload fixtures/payloads/incoming-incident-salesforce-sso.json \
-  --historical-incidents data/input/incidents.csv \
-  --approve-action-id uat-step-3
-```
-
-The approved action uses execution policy metadata to determine the target namespace, deployment, playbook, and execution identity. Secrets are not exposed to the workflow state; only credential references are passed through.
-
-The GKE cluster is not required for local development. The repository includes the policy metadata and Ansible playbooks needed to target GKE, but users must configure their own cluster, namespace, `kubectl` credentials, and RBAC bindings.
-
-## Execution policy metadata
-
-Execution policies are stored in:
-
-```text
-data/input/policies/execution_policies.json
-```
-
-Policy metadata is propagated into workflow actions:
-
-```text
-policy_id
-execution_identity
-credential_ref
-gke_cluster
-gke_namespace
-kubernetes_service_account
-ansible_inventory
-ansible_playbook
-allowed_kubernetes_resources
-allowed_kubernetes_verbs
-target_deployment
-desired_replicas
-```
-
-This allows the workflow to separate:
-
-```text
-MIM policy
-  Decides whether the action should be allowed.
-
-Identity / credential policy
-  Decides which credential reference and execution identity are used.
-
-GKE / Kubernetes policy
-  Enforces what the runner can technically do in the target namespace.
-```
-
-## Typical demo order
-
-```text
-1. Run pytest.
-2. Normalise the cyber dataset.
-3. Run the IT/MIM workflow smoke test.
-4. Run the cyber workflow smoke test.
-5. Start MongoDB and seed memory data.
-6. Optionally configure GKE.
-7. Run the approved action in simulated mode.
-8. Optionally run the approved action with REAL_EXECUTION=true.
-9. Inspect execution logs and validation evidence.
-```
-## Run API and React frontend locally
-
-Start the FastAPI backend:
+## 1. Start MongoDB
 
 ```bash
 cd ~/mim-incident-intelligence
-PYTHONPATH=. uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-In a second terminal, start the React/Vite frontend:
-
-```bash
-cd ~/mim-incident-intelligence/frontend
-npm install
-npm run dev -- --host 0.0.0.0
-```
-
-Open the frontend on port `5173`.
-
-The frontend calls the API through the Vite proxy. The API must be running on port `8000`.
-
-Useful checks:
-
-```bash
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/options
-```
-
-## Known workflow behaviour
-
-The system does not always create an executable remediation plan. If no matching KBA/DIP is found, it falls back to manual review.
-
-When a matching KBA/DIP and execution policy are available, the workflow can create an approval-gated action plan and execute only the manually approved action.
-
-This is intentional. The workflow is designed to accelerate known or well-matched incident patterns, while safely routing unknown or ambiguous incidents to manual review.
-
-## Run API and React frontend locally
-
-Start the FastAPI backend:
-
-```bash
-cd ~/mim-incident-intelligence
-PYTHONPATH=. uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-In a second terminal, start the React/Vite frontend:
-
-```bash
-cd ~/mim-incident-intelligence/frontend
-npm install
-npm run dev -- --host 0.0.0.0
-```
-
-Open the frontend on port `5173`.
-
-The frontend calls the API through the Vite proxy. The API must be running on port `8000`.
-
-Useful checks:
-
-```bash
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/options
-```
-
-## Known workflow behaviour
-
-The system does not always create an executable remediation plan. If no matching KBA/DIP is found, it falls back to manual review.
-
-When a matching KBA/DIP and execution policy are available, the workflow can create an approval-gated action plan and execute only the manually approved action.
-
-This is intentional. The workflow is designed to accelerate known or well-matched incident patterns, while safely routing unknown or ambiguous incidents to manual review.
-
-
-Compose up MongoDB to use MongoDB MCP:
-
-```bash
-cd ~/mim-incident-intelligence
-
-docker compose config --services
 docker compose up -d mongodb
 docker compose ps
 ```
 
+---
+
+## 2. Start the MongoDB MCP server
+
+Run this in a separate terminal and leave it open:
+
+```bash
+cd ~/mim-incident-intelligence
+
+export MDB_MCP_CONNECTION_STRING="mongodb://127.0.0.1:27017/?directConnection=true"
+
+npx -y mongodb-mcp-server@latest \
+  --transport http \
+  --httpHost=127.0.0.1 \
+  --readOnly
+```
+
+Confirm the MCP server is listening:
+
+```bash
+ss -ltnp | grep ':3000'
+```
+
+---
+
+## 3. Start FastAPI
+
+Run this in a separate terminal:
+
+```bash
+cd ~/mim-incident-intelligence
+source .venv/bin/activate
+
+export USE_MONGO_MCP=true
+export MONGODB_MCP_URL="http://127.0.0.1:3000/mcp"
+
+# Use false for safe local testing.
+# Use true only for controlled live GKE execution.
+export REAL_EXECUTION=false
+
+PYTHONPATH=. python -m uvicorn app.api.main:app \
+  --host 0.0.0.0 \
+  --port 8000
+```
+
+Confirm the API is reachable:
+
+```bash
+curl -s http://127.0.0.1:8000/api/health
+```
+
+Expected:
+
+```json
+{"status":"ok"}
+```
+
+Confirm the execution mode:
+
+```bash
+curl -s http://127.0.0.1:8000/api/options | python -m json.tool
+```
+
+---
+
+## 4. Run the ADK agent
+
+Run this in a separate terminal:
+
+```bash
+cd ~/mim-incident-intelligence
+source .venv/bin/activate
+
+export GOOGLE_CLOUD_PROJECT="your_gcp_project_id"
+export GOOGLE_CLOUD_LOCATION="global"
+export GOOGLE_GENAI_USE_VERTEXAI="True"
+export GEMINI_MODEL="gemini-3.1-flash-lite"
+export MIM_API_BASE_URL="http://127.0.0.1:8000"
+
+cd agents
+adk run mim_agent
+```
+
+Use a single-line prompt in the CLI:
+
+```text
+Create workflow for Incident ID INC9999, Service Salesforce, Short Description Users unable to login, Description Large group of users seeing SSO redirect loop after SAML certificate change, Severity SEV1, Priority P1. Retrieve operational memory and return the grounded action plan. Do not execute anything.
+```
+
+---
+
+## 5. Enable controlled live GKE execution
+
+Restart FastAPI with:
+
+```bash
+export REAL_EXECUTION=true
+```
+
+Confirm:
+
+```bash
+curl -s http://127.0.0.1:8000/api/options | python -m json.tool
+```
+
+Expected:
+
+```json
+"execution_mode": "real"
+```
+
+The GKE node pool may have been scaled to zero to reduce cost. If so, restore one worker node:
+
+```bash
+gcloud container clusters resize mim-demo-cluster \
+  --zone australia-southeast1-a \
+  --node-pool default-pool \
+  --num-nodes 1
+```
+
+Wait for the node to become ready:
+
+```bash
+kubectl get nodes -w
+```
+
+Check deployment status:
+
+```bash
+kubectl get pods \
+  -n client-a-uat \
+  -o wide
+```
+
+Approve an action using the explicit format:
+
+```text
+Approve workflow WF-INC9999 action uat-step-1. Set human_approved to true.
+```
+
+---
+
+## Troubleshooting
+
+### `httpx.ConnectError: All connection attempts failed`
+
+MongoDB may be running while the separate MCP HTTP server is stopped.
+
+Check:
+
+```bash
+ss -ltnp | grep -E ':27017|:3000|:8000'
+```
+
+### `Blocked: GKE location is not whitelisted`
+
+Confirm the execution policy contains:
+
+```json
+"gke_location": "australia-southeast1-a"
+```
+
+Create a fresh workflow after updating the policy.
+
+### Rollout timeout: `0 of 2 updated replicas are available`
+
+Check:
+
+```bash
+kubectl get nodes
+kubectl get pods -n client-a-uat -o wide
+kubectl get events -n client-a-uat --sort-by='.lastTimestamp' | tail -n 40
+```
+
+If there are no worker nodes, resize the GKE node pool from `0` to `1`.
+
+---
+
+## Shut down after the demo
+
+Scale the workload to zero:
+
+```bash
+kubectl scale deployment fake-auth-service \
+  --replicas=0 \
+  -n client-a-uat
+```
+
+Scale the node pool to zero:
+
+```bash
+gcloud container clusters resize mim-demo-cluster \
+  --zone australia-southeast1-a \
+  --node-pool default-pool \
+  --num-nodes 0
+```
+
+Execution logs are written under:
+
+```text
+data/output/execution_logs/
+```

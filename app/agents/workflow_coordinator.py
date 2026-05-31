@@ -121,6 +121,7 @@ class WorkflowCoordinatorAgent:
 
         policy_id = policy.get("policy_id") if policy else None
         gke_cluster = policy.get("gke_cluster") if policy else None
+        gke_location = policy.get("gke_location") if policy else None
         gke_namespace = policy.get("gke_namespace") if policy else None
         kubernetes_service_account = (
             policy.get("kubernetes_service_account") if policy else None
@@ -160,6 +161,7 @@ class WorkflowCoordinatorAgent:
                     "execution_identity": execution_identity,
                     "credential_ref": credential_ref,
                     "gke_cluster": gke_cluster,
+                    "gke_location": gke_location,
                     "gke_namespace": gke_namespace,
                     "kubernetes_service_account": kubernetes_service_account,
                     "ansible_inventory": ansible_inventory,

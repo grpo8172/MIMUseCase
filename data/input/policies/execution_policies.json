@@ -25,6 +25,7 @@
     "execution_identity": "mim-executor-iam-uat",
     "credential_ref": "secret-manager://mim-demo/uat/iam-ansible-runner",
     "gke_cluster": "mim-demo-cluster",
+    "gke_location": "australia-southeast1-a",
     "gke_namespace": "client-a-uat",
     "kubernetes_service_account": "mim-executor-ksa",
     "ansible_inventory": "inventories/uat.ini",
