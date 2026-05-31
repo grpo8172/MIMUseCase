@@ -1,4 +1,224 @@
 services:
+  # ---------------------------------------------------------------------------
+  # Seed MongoDB explicitly during first-time local setup.
+  #
+  # This service is excluded from a normal `docker compose up`.
+  # Run it manually only when the database is new or intentionally reset:
+  #
+  #   docker compose up -d mongodb
+  #   docker compose --profile seed run --rm mongodb-seed
+  #
+  # For the hosted deployment, use the same container entrypoint as a
+  # one-off Cloud Run Job after provisioning the external MongoDB database.
+  # ---------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: mim-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep mongod >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongodb-seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-mongodb-seed
+    profiles: ["seed"]
+    restart: "no"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-mim}
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./data:/app/data:ro
+      - ./fixtures:/app/fixtures:ro
+    entrypoint:
+      - python
+      - /app/scripts/seed_mongodb.py
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Default long-running local demo stack
+  # ---------------------------------------------------------------------------
+
+  mongodb-mcp:
+    image: node:20
+    container_name: mim-mongodb-mcp
+    working_dir: /app
+    environment:
+      MDB_MCP_CONNECTION_STRING: mongodb://mongodb:27017/?directConnection=true
+    command:
+      - sh
+      - -c
+      - >
+        npx -y mongodb-mcp-server@latest
+        --transport http
+        --httpHost=0.0.0.0
+        --readOnly
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mim-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-api
+    environment:
+      PYTHONPATH: /app
+      CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-project-8ecd61cd-68ba-43c2-abd}
+      GKE_CLUSTER_NAME: ${GKE_CLUSTER_NAME:-mim-demo-cluster}
+      GKE_CLUSTER_LOCATION: ${GKE_CLUSTER_LOCATION:-australia-southeast1-a}
+      USE_MONGO_MCP: "true"
+      MONGODB_MCP_URL: http://mongodb-mcp:3000/mcp
+
+      # Keep safe mode on for the first smoke test.
+      REAL_EXECUTION: ${REAL_EXECUTION:-false}
+
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GOOGLE_GENAI_USE_VERTEXAI: ${GOOGLE_GENAI_USE_VERTEXAI:-True}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+
+      # Used when Application Default Credentials are mounted below.
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+    volumes:
+      - ./app:/app/app:ro
+      - ./agents:/app/agents:ro
+      - ./fixtures:/app/fixtures:ro
+      - ./data:/app/data
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/gcp/application_default_credentials.json:ro
+      - ./playbooks:/app/playbooks:ro
+    entrypoint:
+      - python
+      - -m
+      - uvicorn
+    command:
+      - app.api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb-mcp
+
+  frontend:
+    image: node:20
+    container_name: mim-frontend
+    working_dir: /app/frontend
+    environment:
+      VITE_API_BASE_URL: ""
+    volumes:
+      - ./frontend:/app/frontend
+      - mim-frontend-node-modules:/app/frontend/node_modules
+    command:
+      - sh
+      - -c
+      - npm install && npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    depends_on:
+      - mim-api
+
+  # ---------------------------------------------------------------------------
+  # Optional ADK workflows
+  # ---------------------------------------------------------------------------
+
+  mim-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-agent
+    profiles: ["agent"]
+    working_dir: /app/agents
+    environment:
+      PYTHONPATH: /app
+      MIM_API_BASE_URL: http://mim-api:8000
+
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GOOGLE_GENAI_USE_VERTEXAI: ${GOOGLE_GENAI_USE_VERTEXAI:-True}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+    volumes:
+      - ./agents:/app/agents:ro
+      - ./app:/app/app:ro
+      - ./fixtures:/app/fixtures:ro
+      - ./data:/app/data
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/gcp/application_default_credentials.json:ro
+    entrypoint:
+      - adk
+    command:
+      - run
+      - mim_agent
+    depends_on:
+      - mim-api
+
+  mim-adk-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-adk-web
+    profiles: ["adk-web"]
+    working_dir: /app/agents
+    environment:
+      PYTHONPATH: /app
+      MIM_API_BASE_URL: http://mim-api:8000
+
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GOOGLE_GENAI_USE_VERTEXAI: ${GOOGLE_GENAI_USE_VERTEXAI:-True}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+    volumes:
+      - ./agents:/app/agents:ro
+      - ./app:/app/app:ro
+      - ./fixtures:/app/fixtures:ro
+      - ./data:/app/data
+      - ${ADC_FILE}:/tmp/gcp/application_default_credentials.json:ro
+    entrypoint:
+      - adk
+    command:
+      - web
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+      - --allow_origins
+      - "regex:https://.*\\.cloudshell\\.dev"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - mim-api
+
+  # ---------------------------------------------------------------------------
+  # Existing one-shot dataset-profiling and incident-analysis workflows
+  # ---------------------------------------------------------------------------
+
   mim-inspector:
     build:
       context: .
@@ -7,6 +227,7 @@ services:
         INSTALL_DEV: "true"
     image: mim-pipeline-inspector:local
     container_name: mim-pipeline-inspector
+    profiles: ["inspection"]
     environment:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
@@ -16,6 +237,7 @@ services:
       - ./app:/app/app:ro
       - ./fixtures:/app/fixtures:ro
       - ./data:/app/data
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/gcp/application_default_credentials.json:ro
     command:
       - --payload
       - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
@@ -60,6 +282,7 @@ services:
         INSTALL_DEV: "true"
     image: mim-pipeline-inspector:local
     container_name: mim-incident-worker
+    profiles: ["worker"]
     environment:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
@@ -81,6 +304,8 @@ services:
       - --output-file
       - /app/data/output/incoming-incident-analysis.json
 
+  # This preserves your existing internal MCP smoke workflow.
+  # It is separate from the MongoDB MCP HTTP service used by FastAPI.
   mim-mcp:
     build:
       context: .
@@ -89,6 +314,7 @@ services:
         INSTALL_DEV: "true"
     image: mim-pipeline-inspector:local
     container_name: mim-mcp-smoke
+    profiles: ["internal-mcp-smoke"]
     environment:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
@@ -102,10 +328,48 @@ services:
       - -m
       - app.mcp.server
 
-  mongodb:
-    image: mongo:7
-    container_name: mim-mongodb
-    ports:
-      - "27017:27017"
+  # ---------------------------------------------------------------------------
+  # End-to-end workflow smoke test
+  # ---------------------------------------------------------------------------
+
+  mim-workflow-smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    image: mim-pipeline-inspector:local
+    container_name: mim-workflow-smoke
+    profiles: ["smoke"]
+    environment:
+      PYTHONPATH: /app
+      USE_MONGO_MCP: "true"
+      MONGODB_MCP_URL: http://mongodb-mcp:3000/mcp
+      REAL_EXECUTION: ${REAL_EXECUTION:-false}
+
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}
+      GOOGLE_GENAI_USE_VERTEXAI: ${GOOGLE_GENAI_USE_VERTEXAI:-True}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
     volumes:
-      - ./data/mongodb:/data/db
+      - ./mim_workflow_smoke.py:/app/mim_workflow_smoke.py:ro
+      - ./app:/app/app:ro
+      - ./fixtures:/app/fixtures:ro
+      - ./data:/app/data
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/gcp/application_default_credentials.json:ro
+    entrypoint:
+      - python
+      - /app/mim_workflow_smoke.py
+    command:
+      - --payload
+      - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
+      - --historical-incidents
+      - /app/data/input/incidents.csv
+      - --approve-action-id
+      - uat-step-3
+    depends_on:
+      - mongodb-mcp
+
+volumes:
+  mim-frontend-node-modules:

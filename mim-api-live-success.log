@@ -1,0 +1,9 @@
+mim-api  | INFO:     Started server process [1]
+mim-api  | INFO:     Waiting for application startup.
+mim-api  | INFO:     Application startup complete.
+mim-api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+mim-api  | INFO:     172.18.0.6:39820 - "POST /api/workflows HTTP/1.1" 200 OK
+mim-api  | INFO:     172.18.0.6:39828 - "POST /api/workflows/WF-INC9999-RETRY-2/approve HTTP/1.1" 200 OK
+mim-api  | INFO:     172.18.0.6:56156 - "POST /api/workflows HTTP/1.1" 200 OK
+mim-api  | INFO:     172.18.0.6:55276 - "POST /api/workflows/WF-INC9999-RETRY-3/approve HTTP/1.1" 200 OK
+mim-api  | INFO:     172.18.0.6:52206 - "POST /api/workflows/WF-INC9999-RETRY-3/approve HTTP/1.1" 200 OK
