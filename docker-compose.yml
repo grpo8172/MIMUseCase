@@ -183,7 +183,6 @@ services:
         INSTALL_DEV: "true"
     image: mim-pipeline-inspector:local
     container_name: mim-adk-web
-    profiles: ["adk-web"]
     working_dir: /app/agents
     environment:
       PYTHONPATH: /app

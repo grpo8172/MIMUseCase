@@ -28,6 +28,37 @@ FastAPI approval endpoint
 
 ---
 
+### Quick Start
+Make sure you have your own credentials:
+```bash
+gcloud auth application-default login
+```
+It will tell you where the credentials were saved to file. 
+
+Save them to your tmp:
+```bash
+ADC_SOURCE="/tmp/tmp.bq5yC3wYlZ/application_default_credentials.json"
+ADC_TARGET="$HOME/.config/gcloud/application_default_credentials.json"
+
+sudo rm -rf "$ADC_TARGET"
+mkdir -p "$HOME/.config/gcloud"
+
+cp "$ADC_SOURCE" "$ADC_TARGET"
+chmod 600 "$ADC_TARGET"
+```
+Check and confirm:
+```bash
+docker compose exec mim-api sh -lc '
+  ls -ld /tmp/gcp/application_default_credentials.json
+  test -f /tmp/gcp/application_default_credentials.json &&
+  echo "ADC mount is correct"
+'
+```
+```bash
+docker compose up -d --build
+```
+---
+
 ## 1. Start MongoDB
 
 ```bash
