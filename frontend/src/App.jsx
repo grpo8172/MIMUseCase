@@ -1,6 +1,64 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+export function LiveExecutionControls() {
+  const [status, setStatus] = useState("idle");
+  const [message, setMessage] = useState("");
+
+  async function updateCapacity(action) {
+    setStatus("requesting");
+    setMessage("");
+
+    try {
+      const response = await fetch(`/api/execution/${action}`, {
+        method: "POST",
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.detail ?? "Request failed");
+      }
+
+      setStatus(body.capacity_status);
+      setMessage(
+        action === "enable"
+          ? "Live remediation capacity requested."
+          : "Scale-down requested."
+      );
+    } catch (error) {
+      setStatus("error");
+      setMessage(
+        error instanceof Error ? error.message : "Unexpected error"
+      );
+    }
+  }
+
+  return (
+    <section>
+      <h3>Controlled Live Execution</h3>
+
+      <button
+        type="button"
+        disabled={status === "requesting"}
+        onClick={() => updateCapacity("enable")}
+      >
+        Enable live remediation
+      </button>
+
+      <button
+        type="button"
+        disabled={status === "requesting"}
+        onClick={() => updateCapacity("disable")}
+      >
+        Disable live remediation
+      </button>
+
+      {message && <p>{message}</p>}
+    </section>
+  );
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const DEFAULT_MANUAL_PAYLOAD = {

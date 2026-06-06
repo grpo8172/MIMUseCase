@@ -15,7 +15,7 @@ from app.models.workflow_state import WorkflowState
 import os
 
 from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
-
+from app.api.execution import router as execution_router
 
 app = FastAPI(
     title="MIM Incident Intelligence API",
@@ -23,9 +23,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-
 WORKFLOW_STORE: dict[str, WorkflowState] = {}
 
+app.include_router(execution_router)
 
 PAYLOAD_OPTIONS = {
     "salesforce_sso": "fixtures/payloads/incoming-incident-salesforce-sso.json",

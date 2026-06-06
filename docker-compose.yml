@@ -48,6 +48,65 @@ services:
       mongodb:
         condition: service_healthy
 
+
+  terraform-init:
+    image: hashicorp/terraform:1.14
+    container_name: mim-terraform-init
+    profiles: ["infra"]
+    restart: "no"
+    working_dir: /workspace/infra
+    volumes:
+      - ./infra:/workspace/infra
+      - type: bind
+        source: ${ADC_FILE}
+        target: /tmp/gcp/application_default_credentials.json
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+      TF_VAR_project_id: ${GOOGLE_CLOUD_PROJECT}
+      TF_VAR_region: ${GOOGLE_CLOUD_REGION:-australia-southeast1}
+      TF_VAR_gke_zone: ${GKE_CLUSTER_LOCATION:-australia-southeast1-a}
+      TF_VAR_mim_api_image: ${MIM_API_IMAGE}
+    command:
+      - init
+      - -input=false
+
+  terraform-apply:
+    image: hashicorp/terraform:1.14
+    container_name: mim-terraform-apply
+    profiles: ["infra"]
+    restart: "no"
+    working_dir: /workspace/infra
+    volumes:
+      - ./infra:/workspace/infra
+      - type: bind
+        source: ${ADC_FILE}
+        target: /tmp/gcp/application_default_credentials.json
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp/application_default_credentials.json
+
+      TF_VAR_project_id: ${GOOGLE_CLOUD_PROJECT:?Set GOOGLE_CLOUD_PROJECT in .env}
+      TF_VAR_region: ${GOOGLE_CLOUD_REGION:-australia-southeast1}
+      TF_VAR_gke_zone: ${GKE_CLUSTER_LOCATION:-australia-southeast1-a}
+      TF_VAR_mim_api_image: ${MIM_API_IMAGE}
+      TF_VAR_real_execution: ${REAL_EXECUTION:-false}
+      TF_VAR_gke_worker_nodes: ${GKE_WORKER_NODES:-0}
+
+    entrypoint:
+      - sh
+      - -lc
+    command:
+      - |
+        terraform init -input=false
+        terraform validate
+        terraform plan -input=false -out=tfplan
+        terraform apply -input=false -auto-approve tfplan
+        
   # ---------------------------------------------------------------------------
   # Default long-running local demo stack
   # ---------------------------------------------------------------------------
@@ -68,6 +127,13 @@ services:
         --readOnly
     ports:
       - "3000:3000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "require('net').connect(3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
     depends_on:
       mongodb:
         condition: service_healthy

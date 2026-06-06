@@ -39,5 +39,4 @@ RUN useradd --create-home --shell /bin/bash appuser \
 
 USER appuser
 
-ENTRYPOINT ["python", "/app/mim_pipeline_inspector.py"]
-CMD ["--help"]
+CMD ["sh", "-c", "python -m uvicorn app.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

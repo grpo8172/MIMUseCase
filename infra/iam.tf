@@ -1,9 +1,11 @@
 resource "google_service_account" "mim_runtime" {
+  project      = var.project_id
   account_id   = "mim-runtime"
   display_name = "MIM runtime service account"
 }
 
 resource "google_service_account" "gke_nodes" {
+  project      = var.project_id
   account_id   = "mim-gke-nodes"
   display_name = "MIM GKE node service account"
 }
@@ -23,7 +25,7 @@ resource "google_project_iam_member" "gke_node_role" {
 resource "kubernetes_role_v1" "mim_remediator" {
   metadata {
     name      = "mim-remediator"
-    namespace = "client-a-uat"
+    namespace = kubernetes_namespace_v1.client_a_uat.metadata[0].name
   }
 
   rule {
@@ -42,7 +44,7 @@ resource "kubernetes_role_v1" "mim_remediator" {
 resource "kubernetes_role_binding_v1" "mim_remediator" {
   metadata {
     name      = "mim-remediator"
-    namespace = "client-a-uat"
+    namespace = kubernetes_namespace_v1.client_a_uat.metadata[0].name
   }
 
   role_ref {
@@ -56,4 +58,22 @@ resource "kubernetes_role_binding_v1" "mim_remediator" {
     name      = google_service_account.mim_runtime.email
     api_group = "rbac.authorization.k8s.io"
   }
+}
+
+terraform {
+  required_providers {
+    google = {
+      source = "hashicorp/google"
+    }
+
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  zone    = var.gke_zone
 }

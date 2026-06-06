@@ -1,0 +1,602 @@
+google_service_account.gke_nodes: Refreshing state... [id=projects/project-8ecd61cd-68ba-43c2-abd/serviceAccounts/mim-gke-nodes@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com]
+google_service_account.mim_runtime: Refreshing state... [id=projects/project-8ecd61cd-68ba-43c2-abd/serviceAccounts/mim-runtime@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com]
+google_container_cluster.mim: Refreshing state... [id=projects/project-8ecd61cd-68ba-43c2-abd/locations/australia-southeast1-a/clusters/mim-demo-cluster]
+google_project_iam_member.mim_cluster_viewer: Refreshing state... [id=project-8ecd61cd-68ba-43c2-abd/roles/container.clusterViewer/serviceAccount:mim-runtime@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com]
+google_cloud_run_v2_service.mim_api: Refreshing state... [id=projects/project-8ecd61cd-68ba-43c2-abd/locations/australia-southeast1/services/mim-api]
+google_project_iam_member.gke_node_role: Refreshing state... [id=project-8ecd61cd-68ba-43c2-abd/roles/container.defaultNodeServiceAccount/serviceAccount:mim-gke-nodes@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # google_container_cluster.mim must be replaced
+-/+ resource "google_container_cluster" "mim" {
+      ~ autopilot_privileged_admission           = [] -> (known after apply)
+      ~ cluster_ipv4_cidr                        = "10.36.0.0/14" -> (known after apply)
+      + datapath_provider                        = (known after apply)
+      ~ default_max_pods_per_node                = 110 -> (known after apply)
+      ~ effective_labels                         = {
+          + "goog-terraform-provisioned" = "true"
+        }
+      - enable_autopilot                         = false -> null
+      ~ enable_intranode_visibility              = false -> (known after apply)
+      ~ enable_l4_ilb_subsetting                 = false -> (known after apply)
+      - enable_tpu                               = false -> null
+      ~ endpoint                                 = "34.40.173.88" -> (known after apply)
+      ~ id                                       = "projects/project-8ecd61cd-68ba-43c2-abd/locations/australia-southeast1-a/clusters/mim-demo-cluster" -> (known after apply)
+      ~ initial_node_count                       = 0 -> 1 # forces replacement
+      ~ label_fingerprint                        = "a9dc16a7" -> (known after apply)
+      ~ logging_service                          = "logging.googleapis.com/kubernetes" -> (known after apply)
+      ~ master_version                           = "1.35.3-gke.2190000" -> (known after apply)
+      ~ monitoring_service                       = "monitoring.googleapis.com/kubernetes" -> (known after apply)
+        name                                     = "mim-demo-cluster"
+      ~ network                                  = "projects/project-8ecd61cd-68ba-43c2-abd/global/networks/default" -> "default"
+      ~ networking_mode                          = "VPC_NATIVE" -> (known after apply)
+      ~ node_locations                           = [] -> (known after apply)
+      ~ node_version                             = "1.35.3-gke.2190000" -> (known after apply)
+      + operation                                = (known after apply)
+      + private_ipv6_google_access               = (known after apply)
+      ~ project                                  = "project-8ecd61cd-68ba-43c2-abd" -> (known after apply)
+      + remove_default_node_pool                 = true
+      - resource_labels                          = {} -> null
+      ~ self_link                                = "https://container.googleapis.com/v1/projects/project-8ecd61cd-68ba-43c2-abd/zones/australia-southeast1-a/clusters/mim-demo-cluster" -> (known after apply)
+      ~ services_ipv4_cidr                       = "34.118.224.0/20" -> (known after apply)
+      ~ subnetwork                               = "projects/project-8ecd61cd-68ba-43c2-abd/regions/australia-southeast1/subnetworks/default" -> (known after apply)
+      ~ terraform_labels                         = {
+          + "goog-terraform-provisioned" = "true"
+        }
+      + tpu_ipv4_cidr_block                      = (known after apply)
+        # (12 unchanged attributes hidden)
+
+      ~ addons_config (known after apply)
+      - addons_config {
+          - dns_cache_config {
+              - enabled = true -> null
+            }
+          - gce_persistent_disk_csi_driver_config {
+              - enabled = true -> null
+            }
+          - network_policy_config {
+              - disabled = true -> null
+            }
+        }
+
+      ~ anonymous_authentication_config (known after apply)
+      - anonymous_authentication_config {
+          - mode = "LIMITED" -> null
+        }
+
+      ~ authenticator_groups_config (known after apply)
+
+      ~ autopilot_cluster_policy_config (known after apply)
+
+      ~ cluster_autoscaling (known after apply)
+      - cluster_autoscaling {
+          - auto_provisioning_locations   = [] -> null
+          - autoscaling_profile           = "BALANCED" -> null
+          - default_compute_class_enabled = false -> null
+          - enabled                       = false -> null
+
+          - auto_provisioning_defaults {
+              - disk_size         = 0 -> null
+              - image_type        = "COS_CONTAINERD" -> null
+              - oauth_scopes      = [
+                  - "https://www.googleapis.com/auth/devstorage.read_only",
+                  - "https://www.googleapis.com/auth/logging.write",
+                  - "https://www.googleapis.com/auth/monitoring",
+                  - "https://www.googleapis.com/auth/service.management.readonly",
+                  - "https://www.googleapis.com/auth/servicecontrol",
+                  - "https://www.googleapis.com/auth/trace.append",
+                ] -> null
+              - service_account   = "default" -> null
+                # (3 unchanged attributes hidden)
+
+              - management {
+                  - auto_repair     = true -> null
+                  - auto_upgrade    = true -> null
+                  - upgrade_options = [] -> null
+                }
+            }
+        }
+
+      ~ confidential_nodes (known after apply)
+
+      ~ control_plane_endpoints_config (known after apply)
+      - control_plane_endpoints_config {
+          - dns_endpoint_config {
+              - allow_external_traffic    = false -> null
+              - enable_k8s_certs_via_dns  = false -> null
+              - enable_k8s_tokens_via_dns = false -> null
+              - endpoint                  = "gke-f6e185c406124bd5bb6e4b47849e9f5bbb00-815610565586.australia-southeast1-a.gke.goog" -> null
+            }
+          - ip_endpoints_config {
+              - enabled = true -> null
+            }
+        }
+
+      ~ cost_management_config (known after apply)
+
+      ~ database_encryption (known after apply)
+      - database_encryption {
+          - state    = "DECRYPTED" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      ~ default_snat_status (known after apply)
+
+      ~ enterprise_config (known after apply)
+      - enterprise_config {
+          - cluster_tier = "STANDARD" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      ~ gateway_api_config (known after apply)
+
+      ~ gke_auto_upgrade_config (known after apply)
+
+      ~ identity_service_config (known after apply)
+
+      ~ ip_allocation_policy (known after apply)
+      - ip_allocation_policy {
+          - cluster_ipv4_cidr_block       = "10.36.0.0/14" -> null
+          - cluster_secondary_range_name  = "gke-mim-demo-cluster-pods-f6e185c4" -> null
+          - services_ipv4_cidr_block      = "34.118.224.0/20" -> null
+          - stack_type                    = "IPV4" -> null
+            # (1 unchanged attribute hidden)
+
+          - network_tier_config {
+              - network_tier = "NETWORK_TIER_DEFAULT" -> null
+            }
+
+          - pod_cidr_overprovision_config {
+              - disabled = false -> null
+            }
+        }
+
+      ~ logging_config (known after apply)
+      - logging_config {
+          - enable_components = [
+              - "SYSTEM_COMPONENTS",
+              - "WORKLOADS",
+            ] -> null
+        }
+
+      ~ master_auth (known after apply)
+      - master_auth {
+          - cluster_ca_certificate = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVMVENDQXBXZ0F3SUJBZ0lSQU9Xb3NWZlRKOFNFTlVHNlRLalltRDR3RFFZSktvWklodmNOQVFFTEJRQXcKTHpFdE1Dc0dBMVVFQXhNa04yUmhOMlJoWWpVdE1EUmxNQzAwWkdVMUxUaGlaVGd0T1dKaVlqUmlPRFZoTWpKaApNQ0FYRFRJMk1EVXpNREEyTWpjek9Wb1lEekl3TlRZd05USXlNRGN5TnpNNVdqQXZNUzB3S3dZRFZRUURFeVEzClpHRTNaR0ZpTlMwd05HVXdMVFJrWlRVdE9HSmxPQzA1WW1KaU5HSTROV0V5TW1Fd2dnR2lNQTBHQ1NxR1NJYjMKRFFFQkFRVUFBNElCandBd2dnR0tBb0lCZ1FEZzF2bERsa2VHb3JWaE9ZUnJhbUovU0RYaUE2QkNOYThaUHdNdQpKVFdzNHZPZ2RXQ3h4QVhYYUIvVlNVVUhXOU5CemZLci9tOGpFdnE5aWdVRjNXL05EVzM0VVAzdkg1V29YTTJQCnRlVzAyMkovcTJNVUdaN1cvbXoyV2hRVVIwc3AxT3VjZ0RKNG9BUEJpTGQ2VjY0R3daUWhpZkdPUWlkaENpeFMKeUFXeThuMWZ2bmtqM3dLSmJBY1RvTndSaDFTZ3d2Wk8yUjlrWVhXQTlKWmlReElNVU1LWVVGVlFSc25NQ1BPSQpaaHFuSjdMc2FVRWFuTm0veFM4SDV3RHhLeW0zZGY3WGQ2SFh2Vldnb2p6T09CUzdqaUo1RUdiZURPTzkvVU9LCkVRWnRiRkVzdmJrNGkzSlgwQjVsQTVNUnIyNlVBdTNsUXVraWx1bkNrYTlQZEVlckx1bWRyOGlsZlIyOE15Z0wKS2NvMExFZ0hmQVkvNE5xdVJSd3pTQnkrZmpqNitBTlNEMGtLSnZPb0J4WWJSQTFwRzRMOGVtckI2MXpldFhydgpKQ3gvYysrTWlLTDFMTkZNc3d5YWxtSnhVMSt2QjV5bmQxbW9CTUhURVZvTld2bHVwSlVYZjlOc0lMblBsK1VlCjhxQ242aktBMlRkNWE2dmhmMFowaE5XdG1sY0NBd0VBQWFOQ01FQXdEZ1lEVlIwUEFRSC9CQVFEQWdJRU1BOEcKQTFVZEV3RUIvd1FGTUFNQkFmOHdIUVlEVlIwT0JCWUVGSUw2OENISFlxQlBidHBGa2tISjg0cmQzWkY2TUEwRwpDU3FHU0liM0RRRUJDd1VBQTRJQmdRQ2duREdqSUJwN2p2VkRBaThxNHNObGpDczdNUmE5cUFCa3NrNXZnbHdyCmh2UXYxSHJmcFk2aHhLM3d3Z1IyaEtqdDJHY01WcWRpRnRQdXRMUHV3cmdxN2JvUEU2cFo2N3ZWU2VMMTZIU1AKWFIvVU1OMEJLUnBkaG9OL3RhNnB0U1YxVlQxdUdWdlpsOThzYlBScU5XOG82bVZZRGd1VkIzSWp2cTZhY0FxUQp1ZFZlREpXTjF1OFArYUp5SVp3R1FCYzR5TDBuYnpOc1poYSt2OFBqeUZPUWxqdVdWNThibWtmMHU5YXpYK3ZECjhTSjlSRitxaWpxbUVCMVBJUE9JZnA2aVJrNU5aYThVTWsyOW9CSjNCZS9BOE54OHRKTGczOGNWVWhsTlhwUmcKRFZvbjJ1QmRsUk1FaFNpalpKTFFhUUdMMmxyeG8zVk10dEl3dGxMaElzRWQvcHZ4ZVVwYkNvbUJrd0FCTFY3TQpQOU5wYkdQUXl2MHNCSzgvdStkeVorZnR4cXdPVlFoL0pXREE0TVBYbnc3eXkwdU5xamt3N0JVTGVQSGoxY21PCk16a3c1aDdnUXhNZ09VdWI5VUMzUTJzTFhSWisraEhEblJRcVp0cGhucTdkWjVRcTZiaytnemRWNE4zZnZMbXEKOWY5bTk4QTVhV1EyZEFuSHFXamlmcWM9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K" -> null
+            # (2 unchanged attributes hidden)
+
+          - client_certificate_config {
+              - issue_client_certificate = false -> null
+            }
+        }
+
+      ~ master_authorized_networks_config (known after apply)
+
+      ~ mesh_certificates (known after apply)
+
+      ~ monitoring_config (known after apply)
+      - monitoring_config {
+          - enable_components = [
+              - "SYSTEM_COMPONENTS",
+              - "STORAGE",
+              - "HPA",
+              - "POD",
+              - "DAEMONSET",
+              - "DEPLOYMENT",
+              - "STATEFULSET",
+              - "CADVISOR",
+              - "KUBELET",
+              - "DCGM",
+              - "JOBSET",
+            ] -> null
+
+          - advanced_datapath_observability_config {
+              - enable_metrics = false -> null
+              - enable_relay   = false -> null
+            }
+
+          - managed_prometheus {
+              - enabled = true -> null
+            }
+        }
+
+      - network_policy {
+          - enabled  = false -> null
+          - provider = "PROVIDER_UNSPECIFIED" -> null
+        }
+
+      ~ node_config (known after apply)
+      - node_config {
+          - disk_size_gb                = 20 -> null
+          - disk_type                   = "pd-balanced" -> null
+          - effective_taints            = [] -> null
+          - enable_confidential_storage = false -> null
+          - flex_start                  = false -> null
+          - image_type                  = "COS_CONTAINERD" -> null
+          - labels                      = {} -> null
+          - local_ssd_count             = 0 -> null
+          - logging_variant             = "DEFAULT" -> null
+          - machine_type                = "e2-small" -> null
+          - metadata                    = {
+              - "disable-legacy-endpoints" = "true"
+            } -> null
+          - oauth_scopes                = [
+              - "https://www.googleapis.com/auth/devstorage.read_only",
+              - "https://www.googleapis.com/auth/logging.write",
+              - "https://www.googleapis.com/auth/monitoring",
+              - "https://www.googleapis.com/auth/service.management.readonly",
+              - "https://www.googleapis.com/auth/servicecontrol",
+              - "https://www.googleapis.com/auth/trace.append",
+            ] -> null
+          - preemptible                 = false -> null
+          - resource_labels             = {
+              - "goog-gke-node-pool-provisioning-model" = "on-demand"
+            } -> null
+          - resource_manager_tags       = {} -> null
+          - service_account             = "default" -> null
+          - spot                        = false -> null
+          - storage_pools               = [] -> null
+          - tags                        = [] -> null
+            # (6 unchanged attributes hidden)
+
+          - boot_disk {
+              - disk_type              = "pd-balanced" -> null
+              - provisioned_iops       = 0 -> null
+              - provisioned_throughput = 0 -> null
+              - size_gb                = 20 -> null
+            }
+
+          - kubelet_config {
+              - allowed_unsafe_sysctls                 = [] -> null
+              - container_log_max_files                = 0 -> null
+              - cpu_cfs_quota                          = false -> null
+              - eviction_max_pod_grace_period_seconds  = 0 -> null
+              - image_gc_high_threshold_percent        = 0 -> null
+              - image_gc_low_threshold_percent         = 0 -> null
+              - insecure_kubelet_readonly_port_enabled = "FALSE" -> null
+              - max_parallel_image_pulls               = 2 -> null
+              - pod_pids_limit                         = 0 -> null
+              - single_process_oom_kill                = false -> null
+                # (5 unchanged attributes hidden)
+            }
+
+          - shielded_instance_config {
+              - enable_integrity_monitoring = true -> null
+              - enable_secure_boot          = false -> null
+            }
+
+          - windows_node_config {
+                # (1 unchanged attribute hidden)
+            }
+        }
+
+      ~ node_pool (known after apply)
+      - node_pool {
+          - initial_node_count          = 0 -> null
+          - instance_group_urls         = [
+              - "https://www.googleapis.com/compute/v1/projects/project-8ecd61cd-68ba-43c2-abd/zones/australia-southeast1-a/instanceGroupManagers/gke-mim-demo-cluster-default-pool-40c575ba-grp",
+            ] -> null
+          - managed_instance_group_urls = [
+              - "https://www.googleapis.com/compute/v1/projects/project-8ecd61cd-68ba-43c2-abd/zones/australia-southeast1-a/instanceGroups/gke-mim-demo-cluster-default-pool-40c575ba-grp",
+            ] -> null
+          - max_pods_per_node           = 110 -> null
+          - name                        = "default-pool" -> null
+          - node_count                  = 0 -> null
+          - node_locations              = [
+              - "australia-southeast1-a",
+            ] -> null
+          - version                     = "1.35.3-gke.2190000" -> null
+            # (1 unchanged attribute hidden)
+
+          - management {
+              - auto_repair  = true -> null
+              - auto_upgrade = true -> null
+            }
+
+          - network_config {
+              - create_pod_range            = false -> null
+              - enable_private_nodes        = false -> null
+              - pod_ipv4_cidr_block         = "10.36.0.0/14" -> null
+              - pod_range                   = "gke-mim-demo-cluster-pods-f6e185c4" -> null
+              - subnetwork                  = "projects/project-8ecd61cd-68ba-43c2-abd/regions/australia-southeast1/subnetworks/default" -> null
+                # (1 unchanged attribute hidden)
+            }
+
+          - node_config {
+              - disk_size_gb                = 20 -> null
+              - disk_type                   = "pd-balanced" -> null
+              - effective_taints            = [] -> null
+              - enable_confidential_storage = false -> null
+              - flex_start                  = false -> null
+              - image_type                  = "COS_CONTAINERD" -> null
+              - labels                      = {} -> null
+              - local_ssd_count             = 0 -> null
+              - logging_variant             = "DEFAULT" -> null
+              - machine_type                = "e2-small" -> null
+              - metadata                    = {
+                  - "disable-legacy-endpoints" = "true"
+                } -> null
+              - oauth_scopes                = [
+                  - "https://www.googleapis.com/auth/devstorage.read_only",
+                  - "https://www.googleapis.com/auth/logging.write",
+                  - "https://www.googleapis.com/auth/monitoring",
+                  - "https://www.googleapis.com/auth/service.management.readonly",
+                  - "https://www.googleapis.com/auth/servicecontrol",
+                  - "https://www.googleapis.com/auth/trace.append",
+                ] -> null
+              - preemptible                 = false -> null
+              - resource_labels             = {
+                  - "goog-gke-node-pool-provisioning-model" = "on-demand"
+                } -> null
+              - resource_manager_tags       = {} -> null
+              - service_account             = "default" -> null
+              - spot                        = false -> null
+              - storage_pools               = [] -> null
+              - tags                        = [] -> null
+                # (6 unchanged attributes hidden)
+
+              - boot_disk {
+                  - disk_type              = "pd-balanced" -> null
+                  - provisioned_iops       = 0 -> null
+                  - provisioned_throughput = 0 -> null
+                  - size_gb                = 20 -> null
+                }
+
+              - kubelet_config {
+                  - allowed_unsafe_sysctls                 = [] -> null
+                  - container_log_max_files                = 0 -> null
+                  - cpu_cfs_quota                          = false -> null
+                  - eviction_max_pod_grace_period_seconds  = 0 -> null
+                  - image_gc_high_threshold_percent        = 0 -> null
+                  - image_gc_low_threshold_percent         = 0 -> null
+                  - insecure_kubelet_readonly_port_enabled = "FALSE" -> null
+                  - max_parallel_image_pulls               = 2 -> null
+                  - pod_pids_limit                         = 0 -> null
+                  - single_process_oom_kill                = false -> null
+                    # (5 unchanged attributes hidden)
+                }
+
+              - shielded_instance_config {
+                  - enable_integrity_monitoring = true -> null
+                  - enable_secure_boot          = false -> null
+                }
+
+              - windows_node_config {
+                    # (1 unchanged attribute hidden)
+                }
+            }
+
+          - upgrade_settings {
+              - max_surge       = 1 -> null
+              - max_unavailable = 0 -> null
+              - strategy        = "SURGE" -> null
+            }
+        }
+
+      ~ node_pool_auto_config (known after apply)
+      - node_pool_auto_config {
+          - resource_manager_tags = {} -> null
+
+          - node_kubelet_config {
+              - insecure_kubelet_readonly_port_enabled = "FALSE" -> null
+            }
+        }
+
+      ~ node_pool_defaults (known after apply)
+      - node_pool_defaults {
+          - node_config_defaults {
+              - insecure_kubelet_readonly_port_enabled = "FALSE" -> null
+              - logging_variant                        = "DEFAULT" -> null
+            }
+        }
+
+      ~ notification_config (known after apply)
+      - notification_config {
+          - pubsub {
+              - enabled = false -> null
+                # (1 unchanged attribute hidden)
+            }
+        }
+
+      ~ pod_autoscaling (known after apply)
+      - pod_autoscaling {
+          - hpa_profile = "PERFORMANCE" -> null
+        }
+
+      - private_cluster_config {
+          - enable_private_endpoint     = false -> null
+          - enable_private_nodes        = false -> null
+          - private_endpoint            = "10.152.0.6" -> null
+          - public_endpoint             = "34.40.173.88" -> null
+            # (3 unchanged attributes hidden)
+
+          - master_global_access_config {
+              - enabled = false -> null
+            }
+        }
+
+      ~ rbac_binding_config (known after apply)
+      - rbac_binding_config {
+          - enable_insecure_binding_system_authenticated   = true -> null
+          - enable_insecure_binding_system_unauthenticated = true -> null
+        }
+
+      ~ release_channel (known after apply)
+      - release_channel {
+          - channel = "REGULAR" -> null
+        }
+
+      - secret_manager_config {
+          - enabled = false -> null
+        }
+
+      - secret_sync_config {
+          - enabled = false -> null
+        }
+
+      ~ security_posture_config (known after apply)
+      - security_posture_config {
+          - mode               = "BASIC" -> null
+          - vulnerability_mode = "VULNERABILITY_MODE_UNSPECIFIED" -> null
+        }
+
+      ~ service_external_ips_config (known after apply)
+      - service_external_ips_config {
+          - enabled = false -> null
+        }
+
+      ~ vertical_pod_autoscaling (known after apply)
+
+      ~ workload_identity_config (known after apply)
+    }
+
+  # google_container_node_pool.default will be created
+  + resource "google_container_node_pool" "default" {
+      + cluster                     = "mim-demo-cluster"
+      + deletion_policy             = "DELETE"
+      + id                          = (known after apply)
+      + initial_node_count          = (known after apply)
+      + instance_group_urls         = (known after apply)
+      + location                    = "australia-southeast1-a"
+      + managed_instance_group_urls = (known after apply)
+      + max_pods_per_node           = (known after apply)
+      + name                        = "default-pool"
+      + name_prefix                 = (known after apply)
+      + node_count                  = (known after apply)
+      + node_locations              = (known after apply)
+      + operation                   = (known after apply)
+      + project                     = "project-8ecd61cd-68ba-43c2-abd"
+      + version                     = (known after apply)
+
+      + autoscaling {
+          + location_policy = (known after apply)
+          + max_node_count  = 1
+          + min_node_count  = 0
+        }
+
+      + management (known after apply)
+
+      + network_config (known after apply)
+
+      + node_config {
+          + disk_size_gb       = (known after apply)
+          + disk_type          = (known after apply)
+          + effective_taints   = (known after apply)
+          + gpudirect_strategy = (known after apply)
+          + image_type         = (known after apply)
+          + labels             = (known after apply)
+          + local_ssd_count    = (known after apply)
+          + logging_variant    = (known after apply)
+          + machine_type       = "e2-small"
+          + metadata           = (known after apply)
+          + min_cpu_platform   = (known after apply)
+          + oauth_scopes       = [
+              + "https://www.googleapis.com/auth/cloud-platform",
+            ]
+          + preemptible        = false
+          + service_account    = "mim-gke-nodes@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com"
+          + spot               = false
+
+          + boot_disk (known after apply)
+
+          + confidential_nodes (known after apply)
+
+          + containerd_config (known after apply)
+
+          + gcfs_config (known after apply)
+
+          + guest_accelerator (known after apply)
+
+          + kubelet_config (known after apply)
+
+          + linux_node_config (known after apply)
+
+          + shielded_instance_config (known after apply)
+
+          + windows_node_config (known after apply)
+
+          + workload_metadata_config (known after apply)
+        }
+
+      + node_drain_config (known after apply)
+
+      + upgrade_settings (known after apply)
+    }
+
+  # kubernetes_role_binding_v1.mim_remediator will be created
+  + resource "kubernetes_role_binding_v1" "mim_remediator" {
+      + id = (known after apply)
+
+      + metadata {
+          + generation       = (known after apply)
+          + name             = "mim-remediator"
+          + namespace        = "client-a-uat"
+          + resource_version = (known after apply)
+          + uid              = (known after apply)
+        }
+
+      + role_ref {
+          + api_group = "rbac.authorization.k8s.io"
+          + kind      = "Role"
+          + name      = "mim-remediator"
+        }
+
+      + subject {
+          + api_group = "rbac.authorization.k8s.io"
+          + kind      = "User"
+          + name      = "mim-runtime@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com"
+          + namespace = "default"
+        }
+    }
+
+  # kubernetes_role_v1.mim_remediator will be created
+  + resource "kubernetes_role_v1" "mim_remediator" {
+      + id = (known after apply)
+
+      + metadata {
+          + generation       = (known after apply)
+          + name             = "mim-remediator"
+          + namespace        = "client-a-uat"
+          + resource_version = (known after apply)
+          + uid              = (known after apply)
+        }
+
+      + rule {
+          + api_groups = [
+              + null,
+            ]
+          + resources  = [
+              + "pods",
+            ]
+          + verbs      = [
+              + "get",
+              + "list",
+              + "watch",
+            ]
+        }
+      + rule {
+          + api_groups = [
+              + "apps",
+            ]
+          + resources  = [
+              + "deployments",
+            ]
+          + verbs      = [
+              + "get",
+              + "list",
+              + "patch",
+              + "update",
+            ]
+        }
+    }
+
+Plan: 4 to add, 0 to change, 1 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
