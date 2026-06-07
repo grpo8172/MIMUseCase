@@ -1,0 +1,53 @@
+---
+- name: Shut down demo Kubernetes workload
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    project_id: "project-8ecd61cd-68ba-43c2-abd"
+    cluster_name: "mim-demo-cluster"
+    cluster_zone: "australia-southeast1-a"
+    node_pool: "mim-remediation-pool"
+    target_namespace: "client-a-uat"
+    target_deployment: "fake-auth-service"
+
+  tasks:
+    - name: Scale fake auth deployment to zero
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - scale
+          - "deployment/{{ target_deployment }}"
+          - "--namespace={{ target_namespace }}"
+          - "--replicas=0"
+      changed_when: true
+
+    - name: Wait for pods to terminate
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - wait
+          - "--for=delete"
+          - pod
+          - "-l"
+          - "app={{ target_deployment }}"
+          - "--namespace={{ target_namespace }}"
+          - "--timeout=120s"
+      changed_when: false
+      failed_when: false
+
+    - name: Scale remediation node pool to zero
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - container
+          - clusters
+          - resize
+          - "{{ cluster_name }}"
+          - "--zone={{ cluster_zone }}"
+          - "--node-pool={{ node_pool }}"
+          - "--num-nodes=0"
+          - "--project={{ project_id }}"
+          - "--quiet"
+      changed_when: true
