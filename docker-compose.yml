@@ -19,10 +19,15 @@ services:
     volumes:
       - ./data/mongodb:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pgrep mongod >/dev/null 2>&1 || exit 1"]
-      interval: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' | grep -q 1"
+        ]
+      interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 10s
 
   mongodb-seed:
     build:
@@ -129,14 +134,14 @@ services:
       - "3000:3000"
     healthcheck:
       test:
-        - CMD-SHELL
-        - node -e "require('net').connect(3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"
+        [
+          "CMD-SHELL",
+          "node -e \"require('net').connect(3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))\""
+        ]
       interval: 5s
       timeout: 3s
       retries: 30
-    depends_on:
-      mongodb:
-        condition: service_healthy
+      start_period: 10s
 
   mim-api:
     build:
@@ -185,6 +190,16 @@ services:
       - "8000:8000"
     depends_on:
       - mongodb-mcp
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/options', timeout=3)\""
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   frontend:
     image: node:20

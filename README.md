@@ -37,14 +37,23 @@ It will tell you where the credentials were saved to file.
 
 Save them to your tmp:
 ```bash
-ADC_SOURCE="/tmp/tmp.bq5yC3wYlZ/application_default_credentials.json"
-ADC_TARGET="$HOME/.config/gcloud/application_default_credentials.json"
+ADC_SOURCE="your_GCP_credential_directory_location"
+ADC_TARGET="your_GCP_credential_directory_location"
 
 sudo rm -rf "$ADC_TARGET"
 mkdir -p "$HOME/.config/gcloud"
 
 cp "$ADC_SOURCE" "$ADC_TARGET"
 chmod 600 "$ADC_TARGET"
+
+Start Everything:
+```bash
+docker compose --profile adk-web up -d --build
+```
+If the agent doesn't know contect seed the DB:
+```bash
+docker compose --profile seed run --rm mongodb-seed
+```
 ```
 Check and confirm:
 ```bash

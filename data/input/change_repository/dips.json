@@ -7,8 +7,8 @@
     "category": "identity_access_management",
     "risk_level": "medium",
     "approval_groups": [
-      "IAM Platform Team",
-      "Change Enablement Team"
+      "SDM",
+      "ITCC"
     ],
     "target_environment_order": [
       "uat",
