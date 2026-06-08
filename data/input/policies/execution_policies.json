@@ -20,7 +20,12 @@
     "policy_id": "EXEC-POLICY-SALESFORCE-UAT",
     "service": "Salesforce",
     "allowed_environments": ["uat"],
-    "allowed_action_types": ["uat_implementation_step"],
+    "allowed_action_types": [
+      "uat_read_only_check",
+      "uat_configuration_update",
+      "uat_validation",
+      "approval_transition"
+    ],
     "requires_human_approval": true,
     "execution_identity": "mim-executor-iam-uat",
     "credential_ref": "secret-manager://mim-demo/uat/iam-ansible-runner",
@@ -29,7 +34,6 @@
     "gke_namespace": "client-a-uat",
     "kubernetes_service_account": "mim-executor-ksa",
     "ansible_inventory": "inventories/uat.ini",
-    "ansible_playbook": "playbooks/scale_k8s_deployment.yml",
     "allowed_kubernetes_resources": [
       "deployment",
       "configmap",
@@ -41,7 +45,33 @@
       "watch",
       "patch"
     ],
-    "target_deployment": "fake-auth-service",
-    "desired_replicas": 2
+    "preflight_playbook": "playbooks/ensure_remediation_capacity.yml",
+    "action_adapters": {
+      "uat-step-1": {
+        "action_type": "uat_read_only_check",
+        "ansible_playbook": "playbooks/salesforce/detect_certificate_drift.yml",
+        "description": "Compare the approved IdP fingerprint with the active Salesforce-side fingerprint."
+      },
+      "uat-step-2": {
+        "action_type": "uat_read_only_check",
+        "ansible_playbook": "playbooks/salesforce/compare_saml_metadata.yml",
+        "description": "Confirm that Salesforce-side SAML metadata is stale."
+      },
+      "uat-step-3": {
+        "action_type": "uat_configuration_update",
+        "ansible_playbook": "playbooks/salesforce/apply_uat_metadata.yml",
+        "description": "Patch the Salesforce-side UAT metadata and restart the fake authentication deployment."
+      },
+      "uat-step-4": {
+        "action_type": "uat_validation",
+        "ansible_playbook": "playbooks/salesforce/validate_uat_remediation.yml",
+        "description": "Validate rollout readiness and run the pilot-login demo check."
+      },
+      "uat-step-5": {
+        "action_type": "approval_transition",
+        "ansible_playbook": null,
+        "description": "Record successful UAT validation and request production approval."
+      }
+    }
   }
 ]

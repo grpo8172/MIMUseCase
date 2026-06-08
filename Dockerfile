@@ -26,13 +26,18 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
+COPY requirements-ansible.yml /app/requirements-ansible.yml
 
 RUN pip install --upgrade pip \
-    && pip install -r /app/requirements.txt
+    && pip install -r /app/requirements.txt \
+    && ansible-galaxy collection install \
+        -r /app/requirements-ansible.yml \
+        -p /usr/share/ansible/collections
 
 COPY mim_pipeline_inspector.py /app/mim_pipeline_inspector.py
 COPY app /app/app
 COPY playbooks /app/playbooks
+COPY inventories /app/inventories
 
 RUN useradd --create-home --shell /bin/bash appuser \
     && chown -R appuser:appuser /app

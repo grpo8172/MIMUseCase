@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from app.io.dip_repository import DIPRepository
 from app.mcp.schemas import MCPIncidentAnalysisRequest
 from app.mcp.tools import analyse_incident
@@ -27,6 +28,65 @@ class WorkflowCoordinatorAgent:
         self.operational_memory_client = operational_memory_client
         self.historical_incidents_path = historical_incidents_path
         self.resolution_db_path = resolution_db_path
+    
+    @staticmethod
+    def _get_action_adapter(
+        *,
+        policy: dict | None,
+        action_id: str,
+    ) -> dict:
+        if not policy:
+            return {}
+
+        adapters = policy.get("action_adapters", {})
+
+        adapter = adapters.get(action_id)
+
+        if not isinstance(adapter, dict):
+            return {}
+
+        return adapter
+
+    @staticmethod
+    def _build_shared_policy_fields(
+        policy: dict | None,
+    ) -> dict:
+        if not policy:
+            return {
+                "policy_id": None,
+                "execution_identity": None,
+                "credential_ref": None,
+                "gke_cluster": None,
+                "gke_location": None,
+                "gke_namespace": None,
+                "kubernetes_service_account": None,
+                "ansible_inventory": None,
+                "preflight_playbook": None,
+                "allowed_kubernetes_resources": [],
+                "allowed_kubernetes_verbs": [],
+            }
+
+        return {
+            "policy_id": policy.get("policy_id"),
+            "execution_identity": policy.get("execution_identity"),
+            "credential_ref": policy.get("credential_ref"),
+            "gke_cluster": policy.get("gke_cluster"),
+            "gke_location": policy.get("gke_location"),
+            "gke_namespace": policy.get("gke_namespace"),
+            "kubernetes_service_account": policy.get(
+                "kubernetes_service_account"
+            ),
+            "ansible_inventory": policy.get("ansible_inventory"),
+            "preflight_playbook": policy.get("preflight_playbook"),
+            "allowed_kubernetes_resources": policy.get(
+                "allowed_kubernetes_resources",
+                [],
+            ),
+            "allowed_kubernetes_verbs": policy.get(
+                "allowed_kubernetes_verbs",
+                [],
+            ),
+        }
 
     def create_workflow(self, incident_payload: dict) -> WorkflowState:
         incident_id = incident_payload.get("incident_id") or incident_payload.get("number")
@@ -102,9 +162,32 @@ class WorkflowCoordinatorAgent:
         state.status = "context_retrieved"
         return state
 
+        @staticmethod
+        def _build_shared_policy_fields(
+            policy: dict[str, Any] | None,
+        ) -> dict[str, Any]:
+            """Return execution-policy metadata shared by each proposed action."""
+            if not policy:
+                return {}
+
+            return {
+                "policy_id": policy.get("policy_id"),
+                "execution_mode": policy.get("execution_mode", "advisory_only"),
+                "allowed_environments": policy.get(
+                    "allowed_environments",
+                    ["uat"],
+                ),
+                "requires_human_approval": policy.get(
+                    "requires_human_approval",
+                    True,
+                ),
+            }
+
     def create_action_plan(self, state: WorkflowState) -> WorkflowState:
         if not state.context.matched_dips:
-            state.notes.append("No DIP context available; action plan requires manual drafting.")
+            state.notes.append(
+                "No DIP context available; action plan requires manual drafting."
+            )
             state.status = "action_plan_created"
             state.action_plan = {
                 "status": "awaiting_human_approval",
@@ -115,40 +198,37 @@ class WorkflowCoordinatorAgent:
 
         dip = state.context.matched_dips[0]
 
-        policy = self.execution_policy_repository.find_for_service(state.incident.service)
-        credential_ref = policy.get("credential_ref") if policy else None
-        execution_identity = policy.get("execution_identity") if policy else None
+        policy = self.execution_policy_repository.find_for_service(
+            state.incident.service
+        )
 
-        policy_id = policy.get("policy_id") if policy else None
-        gke_cluster = policy.get("gke_cluster") if policy else None
-        gke_location = policy.get("gke_location") if policy else None
-        gke_namespace = policy.get("gke_namespace") if policy else None
-        kubernetes_service_account = (
-            policy.get("kubernetes_service_account") if policy else None
-        )
-        ansible_inventory = policy.get("ansible_inventory") if policy else None
-        ansible_playbook = policy.get("ansible_playbook") if policy else None
-        allowed_kubernetes_resources = (
-            policy.get("allowed_kubernetes_resources", []) if policy else []
-        )
-        allowed_kubernetes_verbs = (
-            policy.get("allowed_kubernetes_verbs", []) if policy else []
-        )
-        target_deployment = (
-            policy.get("target_deployment", "fake-auth-service")
-            if policy
-            else "fake-auth-service"
-        )
-        desired_replicas = policy.get("desired_replicas", 2) if policy else 2
+        shared_policy_fields = self._build_shared_policy_fields(policy)
 
         proposed_actions = []
-        for index, step in enumerate(dip.get("implementation_steps", []), start=1):
+
+        for index, step in enumerate(
+            dip.get("implementation_steps", []),
+            start=1,
+        ):
+            action_id = f"uat-step-{index}"
+
+            adapter = self._get_action_adapter(
+                policy=policy,
+                action_id=action_id,
+            )
+
             proposed_actions.append(
                 {
-                    "action_id": f"uat-step-{index}",
-                    "action_type": "uat_implementation_step",
+                    "action_id": action_id,
+                    "action_type": adapter.get(
+                        "action_type",
+                        "advisory_only",
+                    ),
                     "title": f"UAT implementation step {index}",
-                    "description": step,
+                    "description": adapter.get(
+                        "description",
+                        step,
+                    ),
                     "environment": "uat",
                     "approval_status": "awaiting_approval",
                     "execution_status": "not_started",
@@ -157,19 +237,9 @@ class WorkflowCoordinatorAgent:
                     "source_dip_id": dip.get("dip_id"),
                     "source_kba_id": dip.get("linked_kba_id"),
                     "approval_groups": dip.get("approval_groups", []),
-                    "policy_id": policy_id,
-                    "execution_identity": execution_identity,
-                    "credential_ref": credential_ref,
-                    "gke_cluster": gke_cluster,
-                    "gke_location": gke_location,
-                    "gke_namespace": gke_namespace,
-                    "kubernetes_service_account": kubernetes_service_account,
-                    "ansible_inventory": ansible_inventory,
-                    "ansible_playbook": ansible_playbook,
-                    "allowed_kubernetes_resources": allowed_kubernetes_resources,
-                    "allowed_kubernetes_verbs": allowed_kubernetes_verbs,
-                    "target_deployment": target_deployment,
-                    "desired_replicas": desired_replicas,
+                    "ansible_playbook": adapter.get("ansible_playbook"),
+                    "live_execution_supported": bool(adapter),
+                    **shared_policy_fields,
                 }
             )
 
@@ -183,7 +253,10 @@ class WorkflowCoordinatorAgent:
             "source_kba_id": dip.get("linked_kba_id"),
             "risk_level": dip.get("risk_level", "medium"),
             "approval_groups": dip.get("approval_groups", []),
-            "target_environment_order": dip.get("target_environment_order", ["uat"]),
+            "target_environment_order": dip.get(
+                "target_environment_order",
+                ["uat"],
+            ),
             "proposed_actions": proposed_actions,
             "rollback_steps": dip.get("rollback_steps", []),
             "validation_steps": dip.get("validation_steps", []),
@@ -191,7 +264,10 @@ class WorkflowCoordinatorAgent:
 
         state.validation.checks = dip.get("validation_steps", [])
         state.status = "awaiting_approval"
-        state.notes.append(f"Created action plan from {dip.get('dip_id')}.")
+        state.notes.append(
+            f"Created action plan from {dip.get('dip_id')}."
+        )
+
         return state
 
 

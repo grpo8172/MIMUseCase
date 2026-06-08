@@ -1,0 +1,31 @@
+---
+- name: Detect Salesforce SAML certificate drift
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Read approved SAML metadata
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: salesforce-saml-approved
+        namespace: client-a-uat
+      register: approved_config
+
+    - name: Read active Salesforce metadata
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: salesforce-saml-active
+        namespace: client-a-uat
+      register: active_config
+
+    - name: Confirm drift exists
+      ansible.builtin.assert:
+        that:
+          - >-
+            approved_config.resources[0].data.certificate_fingerprint !=
+            active_config.resources[0].data.certificate_fingerprint
+        success_msg: "Salesforce-side certificate fingerprint is stale."
+        fail_msg: "No certificate drift detected."

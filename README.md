@@ -45,14 +45,15 @@ mkdir -p "$HOME/.config/gcloud"
 
 cp "$ADC_SOURCE" "$ADC_TARGET"
 chmod 600 "$ADC_TARGET"
+```
 
 Start Everything:
 ```bash
 docker compose --profile adk-web up -d --build
 ```
-If the agent doesn't know contect seed the DB:
+If the agent doesn't know context, seed the DB:
 ```bash
-docker compose --profile seed run --rm mongodb-seed
+docker compose --profile seed run --rm mongodb-seed --build
 ```
 ```
 Check and confirm:

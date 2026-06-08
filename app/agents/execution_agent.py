@@ -33,11 +33,12 @@ class ExecutionAgent:
                 )
                 continue
 
-            result = self.playbook_runner.run(action)
+            result = self.playbook_runner.run(action, state)
             state.execution.results.append(result.model_dump())
 
             action["execution_status"] = result.status
 
-        state.status = "executed"
+        if state.status != "awaiting_production_approval":
+            state.status = "executed"
         state.notes.append("Executed approved actions and skipped unapproved actions.")
         return state

@@ -1,0 +1,9 @@
+{
+  "service": "Salesforce",
+  "active_certificate_fingerprint": "SHA256:OLD-UAT-CERT",
+  "approved_certificate_fingerprint": "SHA256:NEW-IDP-CERT",
+  "active_metadata_version": "2026-04-15",
+  "approved_metadata_version": "2026-05-29",
+  "authentication_service_status": "running",
+  "simulated_login_status": "redirect_loop"
+}

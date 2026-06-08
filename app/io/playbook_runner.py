@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.execution import ExecutionResult
+from app.models.workflow_state import WorkflowState
 
 import os
 import subprocess
@@ -16,16 +17,16 @@ class PlaybookRunner:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
-    def run(self, action: dict[str, Any]) -> ExecutionResult:
+    def execute_action(
+        self,
+        action: dict[str, Any],
+        workflow: WorkflowState | None = None,
+    ) -> ExecutionResult:
+        """Execute one explicitly approved UAT action."""
+
         action_id = str(action.get("action_id"))
-        action_type = str(action.get("action_type"))
-        description = str(action.get("description", ""))
+        action_type = str(action.get("action_type", "ansible_playbook"))
         environment = str(action.get("environment", "uat"))
-        source_dip_id = action.get("source_dip_id")
-        source_kba_id = action.get("source_kba_id")
-        credential_ref = action.get("credential_ref")
-        execution_identity = action.get("execution_identity")
-        policy_id = action.get("policy_id")
 
         if environment != "uat":
             result = ExecutionResult(
@@ -38,57 +39,81 @@ class PlaybookRunner:
             )
             return self._write_log(action, result)
 
-        if action_type != "uat_implementation_step":
+        if action_type == "approval_transition":
+            if workflow is None:
+                result = ExecutionResult(
+                    action_id=action_id,
+                    action_type=action_type,
+                    status="failed",
+                    message="Blocked: workflow transition requires workflow context.",
+                    stderr="Workflow object was not supplied to the runner.",
+                    return_code=1,
+                )
+                return self._write_log(action, result)
+
+            return self._execute_approval_transition(action, workflow)
+
+        return self._run_real_gke_action(action)
+
+
+    def run(
+        self,
+        action: dict[str, Any],
+        workflow: WorkflowState | None = None,
+    ) -> ExecutionResult:
+        """Compatibility wrapper for existing callers."""
+        return self.execute_action(action, workflow)
+
+    def _execute_approval_transition(self, action: dict[str, Any], workflow: WorkflowState,) -> ExecutionResult:
+        action_id = action["action_id"]
+        action_type = action["action_type"]
+
+        transition = action.get("transition", {})
+        expected_from = transition.get("from")
+        target_state = transition.get("to")
+
+        if not target_state:
             result = ExecutionResult(
                 action_id=action_id,
                 action_type=action_type,
                 status="failed",
-                message=f"Unsupported action type: {action_type}",
-                stderr=f"Blocked: unsupported action_type={action_type}",
+                message="Blocked: workflow transition target is missing.",
+                stderr="Expected action.transition.to to be configured.",
                 return_code=1,
             )
             return self._write_log(action, result)
 
+        current_state = workflow.status
 
-        real_execution_enabled = (
-            os.getenv("REAL_EXECUTION", "false").lower() == "true"
-        )
+        if expected_from and current_state != expected_from:
+            result = ExecutionResult(
+                action_id=action_id,
+                action_type=action_type,
+                status="failed",
+                message="Blocked: workflow is not in the expected state.",
+                stderr=(
+                    f"Expected workflow status '{expected_from}', "
+                    f"found '{current_state}'."
+                ),
+                return_code=1,
+            )
+            return self._write_log(action, result)
 
-        if real_execution_enabled:
-            return self._run_real_gke_action(action)
-
-        stdout = "\n".join(
-            [
-                "=== Simulated Ansible UAT Execution ===",
-                f"Action ID: {action_id}",
-                f"Source DIP: {source_dip_id}",
-                f"Source KBA: {source_kba_id}",
-                f"Target environment: {environment}",
-                f"Step: {description}",
-                "Credential handling: credential_ref would be resolved by execution layer.",
-                "Secret exposure: no secret values exposed to LLM or workflow state.",
-                "Result: simulated playbook execution succeeded.",
-            ]
-        )
+        workflow.status = target_state
 
         result = ExecutionResult(
             action_id=action_id,
             action_type=action_type,
             status="succeeded",
-            message="Simulated approved UAT playbook execution completed.",
-            output=(
-                f"Would run whitelisted Ansible workflow for {source_dip_id} / "
-                f"{source_kba_id}: {description}"
+            message=(
+                "UAT validation recorded successfully. "
+                f"Workflow transitioned to '{target_state}'."
             ),
-            stdout=stdout,
-            stderr="",
             return_code=0,
-            evidence=[
-                "No secret values exposed to LLM or workflow state.",
-                "Credential reference would be resolved by execution layer at runtime.",
-                "Execution limited to UAT environment.",
-            ],
         )
+
+        self._persist_workflow(workflow)
+
         return self._write_log(action, result)
 
     def _run_real_gke_action(
@@ -115,7 +140,11 @@ class PlaybookRunner:
         }
 
         allowed_playbooks = {
-            "playbooks/scale_k8s_deployment.yml",
+            "playbooks/ensure_remediation_capacity.yml",
+            "playbooks/salesforce/detect_certificate_drift.yml",
+            "playbooks/salesforce/compare_saml_metadata.yml",
+            "playbooks/salesforce/apply_uat_metadata.yml",
+            "playbooks/salesforce/validate_uat_remediation.yml",
         }
 
         allowed_namespaces = {

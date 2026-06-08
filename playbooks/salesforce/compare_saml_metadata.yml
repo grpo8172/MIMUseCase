@@ -1,0 +1,42 @@
+---
+- name: Compare Salesforce-side SAML metadata with approved IdP metadata
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Read approved IdP metadata
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: salesforce-saml-approved
+        namespace: client-a-uat
+      register: approved_config
+
+    - name: Read active Salesforce metadata
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: salesforce-saml-active
+        namespace: client-a-uat
+      register: active_config
+
+    - name: Confirm Salesforce-side metadata is stale
+      ansible.builtin.assert:
+        that:
+          - >-
+            approved_config.resources[0].data.metadata_version !=
+            active_config.resources[0].data.metadata_version
+        success_msg: >-
+          Salesforce-side metadata is stale and requires an approved UAT update.
+        fail_msg: >-
+          Salesforce-side metadata already matches the approved IdP metadata.
+
+    - name: Print comparison evidence
+      ansible.builtin.debug:
+        msg:
+          approved_metadata_version: >-
+            {{ approved_config.resources[0].data.metadata_version }}
+          active_salesforce_metadata_version: >-
+            {{ active_config.resources[0].data.metadata_version }}
+          result: "metadata_version_mismatch_drift_detected"

@@ -29,7 +29,6 @@ def describe_incident_workflow() -> dict[str, Any]:
         "automatic_execution_allowed": False,
     }
 
-
 def create_incident_workflow(
     incident_id: str,
     service: str,
@@ -40,7 +39,14 @@ def create_incident_workflow(
     environment: str = "uat",
     dataset_key: str = "it_mim",
 ) -> dict[str, Any]:
-    """Create a real grounded workflow through the existing MIM backend."""
+    """
+    Create and persist a grounded remediation workflow.
+
+    IMPORTANT:
+    - Return the authoritative workflow_id and proposed action IDs.
+    - The caller must use the returned identifiers exactly.
+    - Never infer, rewrite, or invent workflow IDs or action IDs.
+    """
     response = httpx.post(
         f"{MIM_API_BASE_URL}/api/workflows",
         json={
@@ -60,6 +66,32 @@ def create_incident_workflow(
     response.raise_for_status()
     return response.json()
 
+
+def approve_workflow_action(
+    workflow_id: str,
+    action_id: str,
+    human_approved: bool,
+) -> dict[str, Any]:
+    """
+    Approve and execute exactly one persisted workflow action.
+
+    Use only a workflow_id and action_id previously returned by the backend.
+    Never generate or infer identifiers from conversational context.
+    Call this only after the user explicitly approves the specific action.
+    """
+    if not human_approved:
+        return {
+            "status": "blocked",
+            "message": "Explicit human approval is required before execution.",
+        }
+
+    response = httpx.post(
+        f"{MIM_API_BASE_URL}/api/workflows/{workflow_id}/approve",
+        json={"action_id": action_id},
+        timeout=180.0,
+    )
+    response.raise_for_status()
+    return response.json()
 
 def create_sample_workflow(
     payload_key: str = "salesforce_sso",

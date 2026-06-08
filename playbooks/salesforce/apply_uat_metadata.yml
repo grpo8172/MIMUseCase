@@ -1,0 +1,40 @@
+---
+- name: Apply corrected Salesforce SAML metadata in UAT
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Patch active Salesforce metadata
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: salesforce-saml-active
+            namespace: client-a-uat
+          data:
+            certificate_fingerprint: "SHA256:NEW-CERT-DEMO"
+            metadata_version: "v2"
+
+    - name: Restart fake auth deployment
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - rollout
+          - restart
+          - deployment/fake-auth-service
+          - --namespace=client-a-uat
+      changed_when: true
+
+    - name: Wait for rollout
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - rollout
+          - status
+          - deployment/fake-auth-service
+          - --namespace=client-a-uat
+          - --timeout=120s
+      changed_when: false
