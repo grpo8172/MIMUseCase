@@ -172,6 +172,7 @@ services:
     volumes:
       - ./app:/app/app:ro
       - ./agents:/app/agents:ro
+      - ./scripts:/app/scripts:ro
       - ./fixtures:/app/fixtures:ro
       - ./data:/app/data
       - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/gcp/application_default_credentials.json:ro

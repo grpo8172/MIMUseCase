@@ -17,6 +17,11 @@ def parse_args() -> argparse.Namespace:
         help="Path to raw cyber events CSV.",
     )
     parser.add_argument(
+        "--stream-output",
+        default="data/generated/cyber_mim_incident_stream.jsonl",
+        help="Path to write normalised incidents for queue replay as JSON Lines.",
+    )
+    parser.add_argument(
         "--output",
         default="data/generated/cyber_mim_incidents.csv",
         help="Path to write normalised canonical incidents CSV.",
@@ -24,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--payload-output",
         default="fixtures/payloads/incoming-cyber-app-exploit.json",
-        help="Path to write one incoming cyber payload fixture.",
+        help="Path to write all incoming cyber payload fixture.",
     )
     parser.add_argument(
         "--limit",

@@ -4,9 +4,9 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+import csv
 
 from pymongo import MongoClient
-
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://mongodb:27017")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "mim")
@@ -18,6 +18,20 @@ FIXTURES_ROOT = Path("/app/fixtures")
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+def load_csv(path: Path, limit: int = 0) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+
+    with path.open(newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+
+        for row in reader:
+            rows.append(dict(row))
+
+            if limit and len(rows) >= limit:
+                break
+
+    return rows
 
 
 def upsert_documents(
@@ -59,6 +73,26 @@ def main() -> None:
             "validation_status": "passed",
         }
     ]
+
+    cyber_incidents_path = DATA_ROOT / "generated" / "cyber_mim_incidents.csv"
+
+    if cyber_incidents_path.exists():
+        cyber_incidents = load_csv(
+            cyber_incidents_path,
+            limit=500,
+        )
+
+        similar_incidents.extend(cyber_incidents)
+
+        print(
+            f"Loaded {len(cyber_incidents)} normalised cyber incidents "
+            "for MongoDB seeding."
+        )
+    else:
+        print(
+            "Cyber incident CSV not found. "
+            "Run scripts/normalize_cyber_events.py first."
+        )
 
     dips_path = DATA_ROOT / "input" / "change_repository" / "dips.json"
     kbas_path = DATA_ROOT / "kbas" / "kba_seed.json"
