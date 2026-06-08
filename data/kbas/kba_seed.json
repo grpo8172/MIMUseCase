@@ -28,5 +28,39 @@
       "Check failed authentication count returns to baseline",
       "Confirm business users can access CRM"
     ]
+  },
+
+  {
+    "kba_id": "KBA-CYBER-001",
+    "title": "Application Server Exploitation or Suspected Remote Compromise",
+    "service": "Cyber Security",
+    "category": "Cyber Application Exploitation",
+    "complexity": "major",
+    "symptoms": [
+      "Unauthorized access to an application server",
+      "Suspicious administrative activity",
+      "Evidence of exploitation through an exposed service",
+      "Potential compromise of application data"
+    ],
+    "known_causes": [
+      "Unpatched internet-facing service",
+      "Compromised credentials",
+      "Vulnerable third-party integration",
+      "Misconfigured application endpoint"
+    ],
+    "resolver_group": "Cyber Incident Response Team",
+    "resolution_steps": [
+      "Contain the affected application or server",
+      "Preserve relevant logs and forensic evidence",
+      "Identify the exposed service or compromised credential",
+      "Apply the approved remediation or patch",
+      "Validate that suspicious activity has stopped"
+    ],
+    "validation_steps": [
+      "Confirm the affected service is contained",
+      "Confirm evidence has been preserved",
+      "Verify that the vulnerability or access path has been removed",
+      "Check that monitoring no longer detects suspicious activity"
+    ]
   }
 ]
