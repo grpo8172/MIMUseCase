@@ -76,6 +76,7 @@ function App() {
   const [inputMode, setInputMode] = useState("sample");
   const [payloadKey, setPayloadKey] = useState("salesforce_sso");
   const [datasetKey, setDatasetKey] = useState("it_mim");
+  const [reviewWorkflows, setReviewWorkflows] = useState([]);
   const [manualPayload, setManualPayload] = useState(
     JSON.stringify(DEFAULT_MANUAL_PAYLOAD, null, 2)
   );
@@ -86,6 +87,7 @@ function App() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    refreshReviewQueue();
     fetch(`${API_BASE_URL}/api/options`)
       .then((response) => {
         if (!response.ok) {
@@ -181,6 +183,48 @@ function App() {
       (result) => result.status === "succeeded"
     ) || [];
 
+  async function refreshReviewQueue() {
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/workflows`);
+
+      if (!response.ok) {
+        throw new Error("Failed to load MIM review queue");
+      }
+
+      const body = await response.json();
+      setReviewWorkflows(body);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function openWorkflow(workflowId) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/workflows/${workflowId}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load workflow");
+      }
+
+      const body = await response.json();
+      const actions = body?.action_plan?.proposed_actions || [];
+
+      setWorkflow(body);
+      setSelectedActionId(actions[0]?.action_id || "");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -200,73 +244,51 @@ function App() {
       </section>
 
       {error && <div className="error">{error}</div>}
+      <section>
+        <div className="section-header">
+          <h2>Incidents requiring MIM review</h2>
 
-      <section className="card controls">
-        <label>
-          Input source
-          <select
-            value={inputMode}
-            onChange={(event) => setInputMode(event.target.value)}
-          >
-            <option value="sample">Sample fixture</option>
-            <option value="manual">Paste manual JSON payload</option>
-          </select>
-        </label>
+          <button onClick={refreshReviewQueue} disabled={loading}>
+            Refresh queue
+          </button>
+        </div>
 
-        {inputMode === "sample" && (
-          <label>
-            Payload
-            <select
-              value={payloadKey}
-              onChange={(event) => setPayloadKey(event.target.value)}
-            >
-              {options &&
-                Object.keys(options.payloads).map((key) => (
-                  <option key={key} value={key}>
-                    {key}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
+        <table>
+          <thead>
+            <tr>
+              <th>Incident</th>
+              <th>Service</th>
+              <th>Priority</th>
+              <th>Classification</th>
+              <th>Confidence</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
 
-        <label>
-          Dataset / memory
-          <select
-            value={datasetKey}
-            onChange={(event) => setDatasetKey(event.target.value)}
-          >
-            {options &&
-              Object.keys(options.datasets).map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
-              ))}
-          </select>
-        </label>
-
-        <button onClick={createWorkflow} disabled={loading || !options}>
-          {loading ? "Running..." : "Create workflow"}
-        </button>
+          <tbody>
+            {reviewWorkflows.map((item) => (
+              <tr key={item.workflow_id}>
+                <td>{item.incident?.incident_id || "-"}</td>
+                <td>{item.incident?.service || "-"}</td>
+                <td>{item.incident?.priority || "-"}</td>
+                <td>{item.analysis?.mim_classification || "-"}</td>
+                <td>
+                  {item.analysis?.mim_confidence != null
+                    ? `${Math.round(item.analysis.mim_confidence * 100)}%`
+                    : "-"}
+                </td>
+                <td>{item.status || "-"}</td>
+                <td>
+                  <button onClick={() => openWorkflow(item.workflow_id)}>
+                    Open
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
-
-      {inputMode === "manual" && (
-        <section className="card">
-          <h2>Manual incident payload</h2>
-          <p>
-            Paste a ServiceNow-style, Dynatrace-style, or manually constructed
-            incident payload.
-          </p>
-
-          <textarea
-            className="payloadEditor"
-            value={manualPayload}
-            onChange={(event) => setManualPayload(event.target.value)}
-            rows={16}
-            spellCheck="false"
-          />
-        </section>
-      )}
 
       {workflow && (
         <>

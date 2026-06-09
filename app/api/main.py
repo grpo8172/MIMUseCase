@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 WORKFLOW_STORE: dict[str, WorkflowState] = {}
+WORKFLOW_OUTPUT_DIR = Path("data/output/api_workflows")
 
 app.include_router(execution_router)
 
@@ -156,6 +157,44 @@ def create_workflow(request: CreateWorkflowRequest) -> dict[str, Any]:
     return state.model_dump()
 
 
+@app.get("/api/workflows")
+def list_mim_review_workflows() -> list[dict[str, Any]]:
+    WORKFLOW_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    review_items: list[dict[str, Any]] = []
+
+    for path in sorted(
+        WORKFLOW_OUTPUT_DIR.glob("*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ):
+        workflow = json.loads(path.read_text(encoding="utf-8"))
+
+        incident = workflow.get("incident", {})
+        analysis = workflow.get("analysis", {})
+        action_plan = workflow.get("action_plan") or {}
+
+        priority = incident.get("priority")
+        classification = analysis.get("mim_classification")
+        workflow_status = workflow.get("status")
+        action_plan_status = action_plan.get("status")
+
+        requires_mim_review = (
+            priority in {"P1", "P2"}
+            or classification in {"major_mim", "global_major_mim"}
+        )
+
+        is_open = workflow_status not in {
+            "validated",
+            "failed",
+            "completed",
+        }
+
+        if requires_mim_review and is_open:
+            review_items.append(workflow)
+
+    return review_items
+
 @app.get("/api/workflows/{workflow_id}")
 def get_workflow(workflow_id: str) -> dict[str, Any]:
     state = WORKFLOW_STORE.get(workflow_id)
@@ -163,12 +202,17 @@ def get_workflow(workflow_id: str) -> dict[str, Any]:
     if state:
         return state.model_dump()
 
-    path = Path("data/output/api_workflows") / f"{workflow_id}.json"
-    if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+    path = WORKFLOW_OUTPUT_DIR / f"{workflow_id}.json"
 
-    raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workflow not found: {workflow_id}",
+        )
 
+    return json.loads(
+        path.read_text(encoding="utf-8")
+    )
 
 @app.post("/api/workflows/{workflow_id}/approve")
 def approve_and_execute(
