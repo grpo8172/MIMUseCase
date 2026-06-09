@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--historical-incidents",
-        default="data/input/incidents.csv",
+        default="data/generated/cyber_mim_incidents.csv",
         help="Path to canonical historical incidents CSV.",
     )
     parser.add_argument(
@@ -47,7 +47,7 @@ def main() -> None:
     payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
 
     coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=args.historical_incidents,
+        dataset_path=args.historical_incidents,
         resolution_db_path=args.resolution_db,
     )
 

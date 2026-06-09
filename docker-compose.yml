@@ -341,7 +341,7 @@ services:
       - ./data:/app/data
     command:
       - --dataset-uri
-      - /app/data/input/incidents.csv
+      - /app/data/generated/cyber_mim_incidents.csv
       - --output-uri
       - /app/data/output/inspection.json
       - --client-size
@@ -379,7 +379,7 @@ services:
       - --incoming-file
       - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
       - --historical-incidents
-      - /app/data/input/incidents.csv
+      - /app/data/generated/cyber_mim_incidents.csv
       - --resolution-db
       - /app/data/resolution_db/incident_resolution_steps.jsonl
       - --output-file
@@ -432,6 +432,9 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       REDIS_INCIDENT_QUEUE: normalized-incidents
+      HISTORICAL_INCIDENTS_PATH: data/generated/cyber_mim_incidents.csv
+    volumes:
+      - ./data:/app/data
 
   # ---------------------------------------------------------------------------
   # End-to-end workflow smoke test
@@ -470,7 +473,7 @@ services:
       - --payload
       - /app/fixtures/payloads/incoming-incident-salesforce-sso.json
       - --historical-incidents
-      - /app/data/input/incidents.csv
+      - /app/data/generated/cyber_mim_incidents.csv
       - --approve-action-id
       - uat-step-3
     depends_on:

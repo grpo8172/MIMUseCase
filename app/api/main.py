@@ -36,7 +36,7 @@ PAYLOAD_OPTIONS = {
 
 
 DATASET_OPTIONS = {
-    "it_mim": "data/input/incidents.csv",
+    "it_mim": "data/generated/cyber_mim_incidents.csv",
     "cyber_mim": "data/generated/cyber_mim_incidents.csv",
 }
 
@@ -58,7 +58,7 @@ class CreateWorkflowRequest(BaseModel):
         default="it_mim",
         description="Known historical dataset key, such as it_mim or cyber_mim.",
     )
-    historical_incidents_path: str | None = Field(
+    dataset_path: str | None = Field(
         default=None,
         description="Direct path to canonical historical incidents CSV.",
     )
@@ -100,8 +100,8 @@ def resolve_payload(request: CreateWorkflowRequest) -> dict[str, Any]:
 
 
 def resolve_dataset_path(request: CreateWorkflowRequest) -> str:
-    if request.historical_incidents_path:
-        path = request.historical_incidents_path
+    if request.dataset_path:
+        path = request.dataset_path
     else:
         dataset_key = request.dataset_key or "it_mim"
         path = DATASET_OPTIONS.get(dataset_key)

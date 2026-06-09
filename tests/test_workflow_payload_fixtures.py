@@ -27,7 +27,7 @@ def test_workflow_handles_payload_fixture_dynamically(
 ) -> None:
     payload = load_payload_fixture(fixture_name)
 
-    coordinator = WorkflowCoordinatorAgent(historical_incidents_path="data/generated/cyber_mim_incidents.csv",)
+    coordinator = WorkflowCoordinatorAgent(dataset_path="data/generated/cyber_mim_incidents.csv",)
     state = coordinator.create_workflow(payload)
     state = coordinator.analyse(state)
     state = coordinator.retrieve_dip_context(state)

@@ -17,7 +17,7 @@ def main() -> None:
 
     request = MCPIncidentAnalysisRequest(
         incident=json.loads(demo_path.read_text(encoding="utf-8")),
-        historical_incidents_path="data/input/incidents.csv",
+        dataset_path="data/generated/cyber_mim_incidents.csv",
         resolution_db_path="data/resolution_db/incident_resolution_steps.jsonl",
     )
 

@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
         "--subscription",
         help="Pub/Sub subscription path for incoming incident messages.",
     )
-    parser.add_argument("--historical-incidents", default="data/input/incidents.csv")
+    parser.add_argument("--historical-incidents", default="data/generated/cyber_mim_incidents.csv")
     parser.add_argument(
         "--resolution-db",
         default="data/resolution_db/incident_resolution_steps.jsonl",

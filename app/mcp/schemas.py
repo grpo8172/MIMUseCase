@@ -27,7 +27,7 @@ class MCPIncidentPayload(BaseModel):
 
 class MCPIncidentAnalysisRequest(BaseModel):
     incident: dict[str, Any]
-    historical_incidents_path: str = "data/input/incidents.csv"
+    dataset_path: str = "data/generated/cyber_mim_incidents.csv"
     resolution_db_path: str = "data/resolution_db/incident_resolution_steps.jsonl"
     similarity_limit: int = 5
 

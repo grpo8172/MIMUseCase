@@ -21,7 +21,7 @@ class IncidentWorker:
         self.db_update_agent = ResolutionDBUpdateAgent()
 
     def process(self, incoming_payload: dict) -> IncidentAnalysisResult:
-        historical = self.historical_loader.load(self.config.historical_incidents)
+        historical = self.historical_loader.load(self.config.dataset_path)
         incoming = self.historical_loader._to_incoming_incident(incoming_payload)
 
         mim_level, mim_confidence, mim_notes = self.mim_agent.classify(incoming)

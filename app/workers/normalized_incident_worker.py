@@ -33,8 +33,8 @@ def process_incident(incident: dict[str, Any]) -> None:
     state = process_workflow(
         payload=incident,
         dataset_path=os.getenv(
-            "HISTORICAL_INCIDENTS_PATH",
-            "data/generated/cyber_mim_incidents.csv",
+            "dataset_path",
+            "/app/data/generated/cyber_mim_incidents.csv",
         ),
     )
 

@@ -16,19 +16,19 @@ def load_payload(path: str) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
-    ("payload_path", "historical_incidents_path"),
+    ("payload_path", "dataset_path"),
     [
         (
             "fixtures/payloads/incoming-incident-salesforce-sso.json",
-            "data/input/incidents.csv",
+            "data/generated/cyber_mim_incidents.csv",
         ),
         (
             "fixtures/payloads/incoming-incident-vault-key.json",
-            "data/input/incidents.csv",
+            "data/generated/cyber_mim_incidents.csv",
         ),
         (
             "fixtures/payloads/incoming-incident-pipeline-failure.json",
-            "data/input/incidents.csv",
+            "data/generated/cyber_mim_incidents.csv",
         ),
         (
             "fixtures/payloads/incoming-cyber-app-exploit.json",
@@ -38,18 +38,18 @@ def load_payload(path: str) -> dict[str, Any]:
 )
 def test_batch_workflow_handles_payloads_and_transformed_datasets(
     payload_path: str,
-    historical_incidents_path: str,
+    dataset_path: str,
 ) -> None:
     if not Path(payload_path).exists():
         pytest.skip(f"Missing payload fixture: {payload_path}")
 
-    if not Path(historical_incidents_path).exists():
-        pytest.skip(f"Missing historical dataset: {historical_incidents_path}")
+    if not Path(dataset_path).exists():
+        pytest.skip(f"Missing historical dataset: {dataset_path}")
 
     payload = load_payload(payload_path)
 
     coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=historical_incidents_path,
+        dataset_path=dataset_path,
     )
 
     state = coordinator.create_workflow(payload)

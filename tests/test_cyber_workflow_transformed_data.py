@@ -28,7 +28,7 @@ def test_cyber_transformed_dataset_creates_kba_dip_action_plan() -> None:
     payload = load_payload(str(payload_path))
 
     coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=str(dataset_path),
+        dataset_path=str(dataset_path),
     )
 
     state = coordinator.create_workflow(payload)
@@ -58,7 +58,7 @@ def test_cyber_transformed_dataset_executes_only_approved_action() -> None:
     payload = load_payload(str(payload_path))
 
     coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=str(dataset_path),
+        dataset_path=str(dataset_path),
     )
 
     state = coordinator.create_workflow(payload)

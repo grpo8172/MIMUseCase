@@ -22,7 +22,7 @@ def write_workflow_state(state: WorkflowState) -> None:
 
 def process_workflow(
     payload: dict[str, Any],
-    historical_incidents_path: str,
+    dataset_path: str,
 ) -> WorkflowState:
     """Run one normalized incident through the complete analysis workflow."""
 
@@ -33,7 +33,7 @@ def process_workflow(
     )
 
     coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=HISTORICAL_INCIDENTS_PATH,
+        dataset_path=dataset_path,
         operational_memory_client=memory_client,
     )
 
