@@ -5,6 +5,7 @@ import json
 
 from scripts.normalize_cyber_events import main as normalize_cyber_events_main
 
+
 def load_payload(path: str) -> dict[str, Any]:
     with Path(path).open(encoding="utf-8") as payload_file:
         return json.load(payload_file)

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
+
 def load_payload(path: str) -> dict[str, Any]:
     with Path(path).open(encoding="utf-8") as payload_file:
         return json.load(payload_file)

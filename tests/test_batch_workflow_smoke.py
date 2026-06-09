@@ -14,17 +14,30 @@ def load_payload(path: str) -> dict[str, Any]:
         return json.load(payload_file)
 
 
-def test_salesforce_sso_happy_path_executes_uat_steps_in_order() -> None:
-    payload = load_payload("fixtures/payloads/incoming-incident-salesforce-sso.json")
-
-    coordinator = WorkflowCoordinatorAgent(
+def build_test_coordinator() -> WorkflowCoordinatorAgent:
+    return WorkflowCoordinatorAgent(
         dataset_path="data/generated/cyber_mim_incidents.csv",
     )
+
+
+def build_initial_state():
+    payload = load_payload(
+        "fixtures/payloads/incoming-incident-salesforce-sso.json"
+    )
+
+    coordinator = build_test_coordinator()
 
     state = coordinator.create_workflow(payload)
     state = coordinator.analyse(state)
     state = coordinator.retrieve_dip_context(state)
     state = coordinator.create_action_plan(state)
+
+    return coordinator, state
+
+
+def test_salesforce_sso_happy_path_executes_uat_steps_in_order() -> None:
+    coordinator, state = build_initial_state()
+    execution_agent = ExecutionAgent()
 
     for action_id in [
         "uat-step-1",
@@ -33,14 +46,14 @@ def test_salesforce_sso_happy_path_executes_uat_steps_in_order() -> None:
         "uat-step-4",
     ]:
         state = coordinator.approve_action(state, action_id)
-        state = ExecutionAgent().execute_approved_actions(state)
+        state = execution_agent.execute_approved_actions(state)
 
     state = ValidationAgent().validate(state)
 
-    results = workflow["execution"]["results"]
-
     succeeded_action_ids = {
-        result["action_id"] for result in results if result["status"] == "succeeded"
+        result["action_id"]
+        for result in state.execution.results
+        if result["status"] == "succeeded"
     }
 
     assert {
@@ -54,19 +67,11 @@ def test_salesforce_sso_happy_path_executes_uat_steps_in_order() -> None:
 
 
 def test_salesforce_step_3_can_be_rolled_back_with_separate_approval() -> None:
-    payload = load_payload("fixtures/payloads/incoming-incident-salesforce-sso.json")
-
-    coordinator = WorkflowCoordinatorAgent(
-        dataset_path="data/generated/cyber_mim_incidents.csv",
-    )
-
-    state = coordinator.create_workflow(payload)
-    state = coordinator.analyse(state)
-    state = coordinator.retrieve_dip_context(state)
-    state = coordinator.create_action_plan(state)
+    coordinator, state = build_initial_state()
+    execution_agent = ExecutionAgent()
 
     state = coordinator.approve_action(state, "uat-step-3")
-    state = ExecutionAgent().execute_approved_actions(state)
+    state = execution_agent.execute_approved_actions(state)
 
     state = coordinator.create_rollback_action_plan(
         state=state,
@@ -82,16 +87,14 @@ def test_salesforce_step_3_can_be_rolled_back_with_separate_approval() -> None:
     assert len(rollback_actions) == 1
     assert state.status == "awaiting_rollback_approval"
 
-    state = coordinator.approve_action(
-        state,
-        "rollback-uat-step-3",
-    )
+    state = coordinator.approve_action(state, "rollback-uat-step-3")
+    state = execution_agent.execute_approved_actions(state)
 
-    state = ExecutionAgent().execute_approved_actions(state)
-
-    succeeded_action_ids = [
-        result["action_id"] for result in state.execution.results if result["status"] == "succeeded"
-    ]
+    succeeded_action_ids = {
+        result["action_id"]
+        for result in state.execution.results
+        if result["status"] == "succeeded"
+    }
 
     assert "rollback-uat-step-3" in succeeded_action_ids
     assert state.status in {
@@ -101,32 +104,44 @@ def test_salesforce_step_3_can_be_rolled_back_with_separate_approval() -> None:
 
 
 def test_rollback_does_not_reexecute_forward_step_3() -> None:
-    coordinator = build_test_coordinator()
+    coordinator, state = build_initial_state()
+    execution_agent = ExecutionAgent()
 
-    state = build_initial_state()
-
-    # Run the forward UAT workflow first.
-    state = coordinator.process(state)
+    # Execute the forward action once.
+    state = coordinator.approve_action(state, "uat-step-3")
+    state = execution_agent.execute_approved_actions(state)
 
     step_3_results_before = [
-        result for result in state.execution.results if result["action_id"] == "uat-step-3"
+        result
+        for result in state.execution.results
+        if result["action_id"] == "uat-step-3"
+        and result["status"] == "succeeded"
     ]
 
     assert len(step_3_results_before) == 1
-    assert step_3_results_before[0]["status"] == "succeeded"
 
-    # Approve and execute only the rollback action.
-    state.execution.approved_action_ids.append("rollback-uat-step-3")
-    state = coordinator.process(state)
+    # Create, approve, and execute the separate rollback action.
+    state = coordinator.create_rollback_action_plan(
+        state=state,
+        action_id="uat-step-3",
+    )
+    state = coordinator.approve_action(state, "rollback-uat-step-3")
+    state = execution_agent.execute_approved_actions(state)
 
     step_3_results_after = [
-        result for result in state.execution.results if result["action_id"] == "uat-step-3"
+        result
+        for result in state.execution.results
+        if result["action_id"] == "uat-step-3"
+        and result["status"] == "succeeded"
     ]
 
     rollback_results = [
-        result for result in state.execution.results if result["action_id"] == "rollback-uat-step-3"
+        result
+        for result in state.execution.results
+        if result["action_id"] == "rollback-uat-step-3"
+        and result["status"] == "succeeded"
     ]
 
-    # The original action must not be executed for a second time.
+    # The forward action must not run again during rollback.
     assert len(step_3_results_after) == len(step_3_results_before)
     assert len(rollback_results) == 1
