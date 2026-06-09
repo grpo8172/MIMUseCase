@@ -11,10 +11,10 @@ from app.agents.execution_agent import ExecutionAgent
 from app.agents.validation_agent import ValidationAgent
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 from app.models.workflow_state import WorkflowState
+from app.services.workflow_service import process_workflow
 
 import os
 
-from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 from app.api.execution import router as execution_router
 
 app = FastAPI(
@@ -141,31 +141,17 @@ def options() -> dict[str, Any]:
         "execution_mode": "real" if __import__("os").getenv("REAL_EXECUTION", "false").lower() == "true" else "simulated",
     }
 
-
 @app.post("/api/workflows")
 def create_workflow(request: CreateWorkflowRequest) -> dict[str, Any]:
     payload = resolve_payload(request)
     dataset_path = resolve_dataset_path(request)
 
-    memory_client = (
-        MongoMCPMemoryClient()
-        if os.getenv("USE_MONGO_MCP", "false").lower() == "true"
-        else None
+    state = process_workflow(
+        payload=payload,
+        dataset_path=dataset_path,
     )
-
-    coordinator = WorkflowCoordinatorAgent(
-        historical_incidents_path=dataset_path,
-        operational_memory_client=memory_client,
-    )
-
-    state = coordinator.create_workflow(payload)
-    state = coordinator.analyse(state)
-    state = coordinator.retrieve_operational_memory(state)
-    state = coordinator.retrieve_dip_context(state)
-    state = coordinator.create_action_plan(state)
 
     WORKFLOW_STORE[state.workflow_id] = state
-    write_workflow_state(state)
 
     return state.model_dump()
 

@@ -409,6 +409,30 @@ services:
       - -m
       - app.mcp.server
 
+# ---------------------------------------------------------------------------
+# Live queue of psuedo data
+# ---------------------------------------------------------------------------
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  normalized-incident-worker:
+    build: .
+    command: python -m app.workers.normalized_incident_worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      REDIS_INCIDENT_QUEUE: normalized-incidents
+
   # ---------------------------------------------------------------------------
   # End-to-end workflow smoke test
   # ---------------------------------------------------------------------------

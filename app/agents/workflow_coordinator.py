@@ -162,27 +162,6 @@ class WorkflowCoordinatorAgent:
         state.status = "context_retrieved"
         return state
 
-        @staticmethod
-        def _build_shared_policy_fields(
-            policy: dict[str, Any] | None,
-        ) -> dict[str, Any]:
-            """Return execution-policy metadata shared by each proposed action."""
-            if not policy:
-                return {}
-
-            return {
-                "policy_id": policy.get("policy_id"),
-                "execution_mode": policy.get("execution_mode", "advisory_only"),
-                "allowed_environments": policy.get(
-                    "allowed_environments",
-                    ["uat"],
-                ),
-                "requires_human_approval": policy.get(
-                    "requires_human_approval",
-                    True,
-                ),
-            }
-
     def create_action_plan(self, state: WorkflowState) -> WorkflowState:
         if not state.context.matched_dips:
             state.notes.append(
