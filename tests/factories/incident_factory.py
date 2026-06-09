@@ -56,9 +56,7 @@ def build_historical_incident_row(
     assignment_group: str = "IAM Platform Team",
     kba_id: str = "KBA-MIM-001",
     resolution_notes: str = "Updated SAML metadata and activated correct certificate",
-    validation_steps: str = (
-        "Confirmed pilot login and auth failure rate returned to baseline"
-    ),
+    validation_steps: str = ("Confirmed pilot login and auth failure rate returned to baseline"),
     **extra_fields: object,
 ) -> dict[str, object]:
     """Build one historical incident row for CSV-style test data."""
@@ -86,9 +84,7 @@ def build_salesforce_sso_payload(**overrides: object) -> dict[str, object]:
     return build_incident_payload(
         service="Salesforce",
         short_description="Users unable to login",
-        description=(
-            "Large group of users seeing SSO redirect loop after SAML certificate change"
-        ),
+        description=("Large group of users seeing SSO redirect loop after SAML certificate change"),
         severity="SEV1",
         priority="P1",
         **overrides,

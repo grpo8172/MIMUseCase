@@ -1,0 +1,33 @@
+#Rollback
+---
+- name: Roll back Salesforce UAT metadata
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    target_namespace: "{{ lookup('env', 'TARGET_NAMESPACE') | default('client-a-uat', true) }}"
+    target_deployment: "{{ lookup('env', 'TARGET_DEPLOYMENT') | default('fake-auth-service', true) }}"
+
+  tasks:
+    - name: Restore previous Salesforce metadata snapshot
+      ansible.builtin.debug:
+        msg: "Restored previous Salesforce vendor metadata snapshot."
+
+    - name: Restart fake authentication deployment
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout restart deployment/{{ target_deployment }}
+          -n {{ target_namespace }}
+      changed_when: true
+
+    - name: Wait for rollback rollout
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status deployment/{{ target_deployment }}
+          -n {{ target_namespace }}
+          --timeout=120s
+      changed_when: false
+
+    - name: Validate rollback completion
+      ansible.builtin.debug:
+        msg: "Rollback rollout is ready."

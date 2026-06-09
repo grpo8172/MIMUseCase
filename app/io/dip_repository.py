@@ -28,11 +28,7 @@ class DIPRepository:
         if not kba_id:
             return []
 
-        return [
-            dip
-            for dip in self.load_all()
-            if str(dip.get("linked_kba_id")) == kba_id
-        ]
+        return [dip for dip in self.load_all() if str(dip.get("linked_kba_id")) == kba_id]
 
     def find_by_category_or_service(
         self,

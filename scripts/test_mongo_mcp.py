@@ -8,7 +8,6 @@ from typing import Any
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-
 MCP_URL = os.getenv("MONGODB_MCP_URL", "http://127.0.0.1:3000/mcp")
 
 

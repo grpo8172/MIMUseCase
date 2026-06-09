@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import csv
 import json
-from pathlib import Path
 
 from scripts.normalize_cyber_events import main as normalize_cyber_events_main
 
+def load_payload(path: str) -> dict[str, Any]:
+    with Path(path).open(encoding="utf-8") as payload_file:
+        return json.load(payload_file)
 
 def test_cyber_normalizer_creates_canonical_incidents_and_payload(
     tmp_path,

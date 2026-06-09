@@ -8,9 +8,7 @@ class ValidationAgent:
 
     def validate(self, state: WorkflowState) -> WorkflowState:
         succeeded = [
-            result
-            for result in state.execution.results
-            if result.get("status") == "succeeded"
+            result for result in state.execution.results if result.get("status") == "succeeded"
         ]
 
         if not succeeded:

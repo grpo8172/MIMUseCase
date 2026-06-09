@@ -10,12 +10,9 @@ from pydantic import BaseModel, Field
 from app.agents.execution_agent import ExecutionAgent
 from app.agents.validation_agent import ValidationAgent
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
+from app.api.execution import router as execution_router
 from app.models.workflow_state import WorkflowState
 from app.services.workflow_service import process_workflow
-
-import os
-
-from app.api.execution import router as execution_router
 
 app = FastAPI(
     title="MIM Incident Intelligence API",
@@ -67,6 +64,10 @@ class CreateWorkflowRequest(BaseModel):
 
 class ApproveWorkflowRequest(BaseModel):
     action_id: str = Field(description="Action ID to approve and execute.")
+
+
+class RollbackWorkflowActionRequest(BaseModel):
+    action_id: str
 
 
 def load_json(path: str) -> dict[str, Any]:
@@ -139,8 +140,11 @@ def options() -> dict[str, Any]:
     return {
         "payloads": PAYLOAD_OPTIONS,
         "datasets": DATASET_OPTIONS,
-        "execution_mode": "real" if __import__("os").getenv("REAL_EXECUTION", "false").lower() == "true" else "simulated",
+        "execution_mode": "real"
+        if __import__("os").getenv("REAL_EXECUTION", "false").lower() == "true"
+        else "simulated",
     }
+
 
 @app.post("/api/workflows")
 def create_workflow(request: CreateWorkflowRequest) -> dict[str, Any]:
@@ -179,10 +183,10 @@ def list_mim_review_workflows() -> list[dict[str, Any]]:
         workflow_status = workflow.get("status")
         action_plan_status = action_plan.get("status")
 
-        requires_mim_review = (
-            priority in {"P1", "P2"}
-            or classification in {"major_mim", "global_major_mim"}
-        )
+        requires_mim_review = priority in {"P1", "P2"} or classification in {
+            "major_mim",
+            "global_major_mim",
+        }
 
         is_open = workflow_status not in {
             "validated",
@@ -194,6 +198,7 @@ def list_mim_review_workflows() -> list[dict[str, Any]]:
             review_items.append(workflow)
 
     return review_items
+
 
 @app.get("/api/workflows/{workflow_id}")
 def get_workflow(workflow_id: str) -> dict[str, Any]:
@@ -210,9 +215,8 @@ def get_workflow(workflow_id: str) -> dict[str, Any]:
             detail=f"Workflow not found: {workflow_id}",
         )
 
-    return json.loads(
-        path.read_text(encoding="utf-8")
-    )
+    return json.loads(path.read_text(encoding="utf-8"))
+
 
 @app.post("/api/workflows/{workflow_id}/approve")
 def approve_and_execute(
@@ -237,3 +241,121 @@ def approve_and_execute(
     write_workflow_state(state)
 
     return state.model_dump()
+
+
+@app.post("/api/workflows/{workflow_id}/rollback")
+def prepare_workflow_rollback(
+    workflow_id: str,
+    request: RollbackWorkflowActionRequest,
+) -> dict[str, Any]:
+    state = WORKFLOW_STORE.get(workflow_id)
+
+    if not state:
+        path = Path("data/output/api_workflows") / f"{workflow_id}.json"
+
+        if path.exists():
+            state = WorkflowState.model_validate_json(path.read_text(encoding="utf-8"))
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found: {workflow_id}",
+            )
+
+    coordinator = WorkflowCoordinatorAgent()
+
+    state = coordinator.create_rollback_action_plan(
+        state=state,
+        action_id=request.action_id,
+    )
+
+    WORKFLOW_STORE[state.workflow_id] = state
+    write_workflow_state(state)
+
+    rollback_action_id = f"rollback-{request.action_id}"
+
+    return {
+        "status": state.status,
+        "workflow_id": workflow_id,
+        "rollback_action_id": rollback_action_id,
+        "message": (
+            f"Rollback action {rollback_action_id} has been created. "
+            "Explicit human approval is required before execution."
+        ),
+        "action_plan": state.action_plan,
+    }
+
+
+@app.get("/api/workflows/{workflow_id}/logs/{action_id}")
+def get_workflow_action_log(
+    workflow_id: str,
+    action_id: str,
+) -> dict[str, Any]:
+    state = WORKFLOW_STORE.get(workflow_id)
+
+    if not state:
+        path = Path("data/output/api_workflows") / f"{workflow_id}.json"
+
+        if path.exists():
+            state = WorkflowState.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found: {workflow_id}",
+            )
+
+    matching_results = [
+        result
+        for result in state.execution.results
+        if result.get("action_id") == action_id
+    ]
+
+    if not matching_results:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No execution result found for action: {action_id}",
+        )
+
+    latest_result = matching_results[-1]
+
+    log_path_value = latest_result.get("log_path")
+
+    if not log_path_value:
+        return {
+            "workflow_id": workflow_id,
+            "action_id": action_id,
+            "status": latest_result.get("status"),
+            "message": latest_result.get("message"),
+            "log_available": False,
+        }
+
+    allowed_log_dir = Path(
+        "data/output/execution_logs"
+    ).resolve()
+
+    log_path = Path(log_path_value).resolve()
+
+    if allowed_log_dir not in log_path.parents:
+        raise HTTPException(
+            status_code=403,
+            detail="Log path is outside the approved log directory.",
+        )
+
+    if not log_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Log file not found for action: {action_id}",
+        )
+
+    return {
+        "workflow_id": workflow_id,
+        "action_id": action_id,
+        "status": latest_result.get("status"),
+        "message": latest_result.get("message"),
+        "log_available": True,
+        "log_content": log_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ),
+    }

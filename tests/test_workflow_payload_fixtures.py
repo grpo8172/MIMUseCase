@@ -27,7 +27,9 @@ def test_workflow_handles_payload_fixture_dynamically(
 ) -> None:
     payload = load_payload_fixture(fixture_name)
 
-    coordinator = WorkflowCoordinatorAgent(dataset_path="data/generated/cyber_mim_incidents.csv",)
+    coordinator = WorkflowCoordinatorAgent(
+        dataset_path="data/generated/cyber_mim_incidents.csv",
+    )
     state = coordinator.create_workflow(payload)
     state = coordinator.analyse(state)
     state = coordinator.retrieve_dip_context(state)
@@ -70,12 +72,8 @@ def test_only_manually_approved_action_executes() -> None:
     state = ExecutionAgent().execute_approved_actions(state)
     state = ValidationAgent().validate(state)
 
-    succeeded = [
-        result for result in state.execution.results if result["status"] == "succeeded"
-    ]
-    skipped = [
-        result for result in state.execution.results if result["status"] == "skipped"
-    ]
+    succeeded = [result for result in state.execution.results if result["status"] == "succeeded"]
+    skipped = [result for result in state.execution.results if result["status"] == "skipped"]
 
     assert len(succeeded) == 1
     assert succeeded[0]["action_id"] == "uat-step-3"

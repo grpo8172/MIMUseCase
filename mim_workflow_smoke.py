@@ -10,9 +10,7 @@ from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run the full MIM workflow smoke test."
-    )
+    parser = argparse.ArgumentParser(description="Run the full MIM workflow smoke test.")
     parser.add_argument(
         "--payload",
         default="fixtures/payloads/incoming-incident-salesforce-sso.json",

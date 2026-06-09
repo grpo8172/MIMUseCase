@@ -25,6 +25,7 @@
       "Restore previous vendor metadata snapshot.",
       "Re-enable previous known-good signing certificate if approved."
     ],
+    "rollback_playbook": "playbooks/salesforce/rollback_salesforce_uat_metadata.yml",
     "validation_steps": [
       "Pilot login succeeds.",
       "SSO redirect loop no longer occurs.",

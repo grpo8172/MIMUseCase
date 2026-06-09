@@ -6,7 +6,6 @@ from typing import Any
 
 import redis
 
-
 DEFAULT_QUEUE_NAME = "normalized-incidents"
 
 

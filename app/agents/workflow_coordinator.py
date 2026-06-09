@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
 from app.io.dip_repository import DIPRepository
+from app.io.execution_policy_repository import ExecutionPolicyRepository
+from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 from app.mcp.schemas import MCPIncidentAnalysisRequest
 from app.mcp.tools import analyse_incident
 from app.models.resolution import IncidentAnalysisResult
 from app.models.workflow_state import WorkflowIncident, WorkflowState
-from app.io.execution_policy_repository import ExecutionPolicyRepository
-from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 
 
 class WorkflowCoordinatorAgent:
@@ -26,9 +25,9 @@ class WorkflowCoordinatorAgent:
             execution_policy_repository or ExecutionPolicyRepository()
         )
         self.operational_memory_client = operational_memory_client
-        self.dataset_path= dataset_path
+        self.dataset_path = dataset_path
         self.resolution_db_path = resolution_db_path
-    
+
     @staticmethod
     def _get_action_adapter(
         *,
@@ -73,9 +72,7 @@ class WorkflowCoordinatorAgent:
             "gke_cluster": policy.get("gke_cluster"),
             "gke_location": policy.get("gke_location"),
             "gke_namespace": policy.get("gke_namespace"),
-            "kubernetes_service_account": policy.get(
-                "kubernetes_service_account"
-            ),
+            "kubernetes_service_account": policy.get("kubernetes_service_account"),
             "ansible_inventory": policy.get("ansible_inventory"),
             "preflight_playbook": policy.get("preflight_playbook"),
             "allowed_kubernetes_resources": policy.get(
@@ -141,21 +138,16 @@ class WorkflowCoordinatorAgent:
         state.analysis.recommended_validation_steps = analysis.recommended_validation_steps
         state.analysis.decision_reasons = analysis.notes
 
-
         state.status = "incident_analysed"
         return state
 
     def retrieve_dip_context(self, state: WorkflowState) -> WorkflowState:
-        matched_dips = self.dip_repository.find_by_kba(
-            state.analysis.recommended_kba_id
-        )
+        matched_dips = self.dip_repository.find_by_kba(state.analysis.recommended_kba_id)
 
         state.context.matched_dips = matched_dips
 
         if matched_dips:
-            state.notes.append(
-                f"Matched {len(matched_dips)} DIP(s) from recommended KBA."
-            )
+            state.notes.append(f"Matched {len(matched_dips)} DIP(s) from recommended KBA.")
         else:
             state.notes.append("No linked DIP found for recommended KBA.")
 
@@ -164,9 +156,7 @@ class WorkflowCoordinatorAgent:
 
     def create_action_plan(self, state: WorkflowState) -> WorkflowState:
         if not state.context.matched_dips:
-            state.notes.append(
-                "No DIP context available; action plan requires manual drafting."
-            )
+            state.notes.append("No DIP context available; action plan requires manual drafting.")
             state.status = "action_plan_created"
             state.action_plan = {
                 "status": "awaiting_human_approval",
@@ -177,9 +167,7 @@ class WorkflowCoordinatorAgent:
 
         dip = state.context.matched_dips[0]
 
-        policy = self.execution_policy_repository.find_for_service(
-            state.incident.service
-        )
+        policy = self.execution_policy_repository.find_for_service(state.incident.service)
 
         shared_policy_fields = self._build_shared_policy_fields(policy)
 
@@ -243,8 +231,110 @@ class WorkflowCoordinatorAgent:
 
         state.validation.checks = dip.get("validation_steps", [])
         state.status = "awaiting_approval"
+        state.notes.append(f"Created action plan from {dip.get('dip_id')}.")
+
+        return state
+
+
+    def create_rollback_action_plan(
+        self,
+        state: WorkflowState,
+        action_id: str,
+    ) -> WorkflowState:
+        if not state.context.matched_dips:
+            state.notes.append(
+                "Rollback requested, but no linked DIP is available."
+            )
+            state.status = "awaiting_manual_intervention"
+            return state
+
+        dip = state.context.matched_dips[0]
+
+        original_actions = (
+            state.action_plan.get("proposed_actions", [])
+            if state.action_plan
+            else []
+        )
+
+        original_action = next(
+            (
+                candidate
+                for candidate in original_actions
+                if candidate.get("action_id") == action_id
+            ),
+            None,
+        )
+
+        if not original_action:
+            state.notes.append(
+                f"Rollback requested for unknown action {action_id}."
+            )
+            state.status = "awaiting_manual_intervention"
+            return state
+
+        rollback_steps = dip.get("rollback_steps", [])
+        rollback_playbook = dip.get("rollback_playbook")
+
+        if not rollback_steps:
+            state.notes.append(
+                "Rollback requested, but the matched DIP does not define "
+                "rollback steps."
+            )
+            state.status = "awaiting_manual_intervention"
+            return state
+
+        policy = self.execution_policy_repository.find_for_service(
+            state.incident.service
+        )
+
+        shared_policy_fields = self._build_shared_policy_fields(policy)
+
+        rollback_action_id = f"rollback-{action_id}"
+
+        rollback_action = {
+            "action_id": rollback_action_id,
+            "action_type": (
+                "ansible_playbook"
+                if rollback_playbook
+                else "manual_intervention"
+            ),
+            "operation": "rollback",
+            "rolls_back_action_id": action_id,
+            "title": f"Roll back {action_id}",
+            "description": (
+                f"Restore the previous known-good configuration for {action_id}."
+            ),
+            "summary": f"Roll back previously executed action {action_id}.",
+            "steps": rollback_steps,
+            "environment": original_action.get("environment", "uat"),
+            "approval_status": "awaiting_approval",
+            "execution_status": "not_started",
+            "requires_human_approval": True,
+            "risk_level": dip.get("risk_level", "medium"),
+            "source_dip_id": dip.get("dip_id"),
+            "source_kba_id": dip.get("linked_kba_id"),
+            "approval_groups": dip.get("approval_groups", []),
+            "ansible_playbook": rollback_playbook,
+            "live_execution_supported": bool(rollback_playbook),
+            **shared_policy_fields,
+        }
+
+        previous_action_plan = state.action_plan
+
+        state.action_plan = {
+            "status": "awaiting_human_approval",
+            "summary": f"Rollback plan created for {action_id}.",
+            "operation": "rollback",
+            "source_dip_id": dip.get("dip_id"),
+            "source_kba_id": dip.get("linked_kba_id"),
+            "proposed_actions": [rollback_action],
+            "previous_action_plan": previous_action_plan,
+        }
+
+        state.status = "awaiting_rollback_approval"
+
         state.notes.append(
-            f"Created action plan from {dip.get('dip_id')}."
+            f"Rollback action {rollback_action_id} created and awaiting approval."
         )
 
         return state
@@ -271,9 +361,7 @@ class WorkflowCoordinatorAgent:
             and similar_incidents[0].get("kba_id")
         ):
             state.analysis.recommended_kba_id = similar_incidents[0]["kba_id"]
-            state.notes.append(
-                "Applied KBA recommendation from MongoDB MCP operational memory."
-            )
+            state.notes.append("Applied KBA recommendation from MongoDB MCP operational memory.")
 
         state.notes.append("Retrieved operational memory through MongoDB MCP.")
         state.status = "operational_memory_retrieved"

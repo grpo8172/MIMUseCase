@@ -7,6 +7,7 @@ try:
 except ImportError:
     pubsub_v1 = None
 
+
 class MIMClassificationAgent:
     """Determines whether an incoming incident looks like a MIM use case."""
 

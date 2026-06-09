@@ -6,6 +6,9 @@ from typing import Any
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 from app.io.mongo_mcp_memory_client import MongoMCPMemoryClient
 
+def load_payload(path: str) -> dict[str, Any]:
+    with Path(path).open(encoding="utf-8") as payload_file:
+        return json.load(payload_file)
 
 class StubMongoMCPMemoryClient:
     """Deterministic test double for MongoDB MCP retrieval."""

@@ -37,7 +37,6 @@ services:
         INSTALL_DEV: "true"
     image: mim-pipeline-inspector:local
     container_name: mim-mongodb-seed
-    profiles: ["seed"]
     restart: "no"
     environment:
       MONGODB_URI: mongodb://mongodb:27017

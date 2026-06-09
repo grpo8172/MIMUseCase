@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -7,8 +9,6 @@ from typing import Any
 from app.models.execution import ExecutionResult
 from app.models.workflow_state import WorkflowState
 
-import os
-import subprocess
 
 class PlaybookRunner:
     """Safe demo runner for approved UAT actions."""
@@ -55,7 +55,6 @@ class PlaybookRunner:
 
         return self._run_real_gke_action(action)
 
-
     def run(
         self,
         action: dict[str, Any],
@@ -64,7 +63,11 @@ class PlaybookRunner:
         """Compatibility wrapper for existing callers."""
         return self.execute_action(action, workflow)
 
-    def _execute_approval_transition(self, action: dict[str, Any], workflow: WorkflowState,) -> ExecutionResult:
+    def _execute_approval_transition(
+        self,
+        action: dict[str, Any],
+        workflow: WorkflowState,
+    ) -> ExecutionResult:
         action_id = action["action_id"]
         action_type = action["action_type"]
 
@@ -91,10 +94,7 @@ class PlaybookRunner:
                 action_type=action_type,
                 status="failed",
                 message="Blocked: workflow is not in the expected state.",
-                stderr=(
-                    f"Expected workflow status '{expected_from}', "
-                    f"found '{current_state}'."
-                ),
+                stderr=(f"Expected workflow status '{expected_from}', found '{current_state}'."),
                 return_code=1,
             )
             return self._write_log(action, result)
@@ -106,8 +106,7 @@ class PlaybookRunner:
             action_type=action_type,
             status="succeeded",
             message=(
-                "UAT validation recorded successfully. "
-                f"Workflow transitioned to '{target_state}'."
+                f"UAT validation recorded successfully. Workflow transitioned to '{target_state}'."
             ),
             return_code=0,
         )
@@ -145,6 +144,7 @@ class PlaybookRunner:
             "playbooks/salesforce/compare_saml_metadata.yml",
             "playbooks/salesforce/apply_uat_metadata.yml",
             "playbooks/salesforce/validate_uat_remediation.yml",
+            "playbooks/salesforce/rollback_salesforce_uat_metadata.yml",
         }
 
         allowed_namespaces = {
@@ -250,7 +250,6 @@ class PlaybookRunner:
             env=env,
             check=False,
         )
-
 
         result = ExecutionResult(
             action_id=action_id,

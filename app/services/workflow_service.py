@@ -27,9 +27,7 @@ def process_workflow(
     """Run one normalized incident through the complete analysis workflow."""
 
     memory_client = (
-        MongoMCPMemoryClient()
-        if os.getenv("USE_MONGO_MCP", "false").lower() == "true"
-        else None
+        MongoMCPMemoryClient() if os.getenv("USE_MONGO_MCP", "false").lower() == "true" else None
     )
 
     coordinator = WorkflowCoordinatorAgent(

@@ -101,18 +101,10 @@ class MongoMCPMemoryClient:
                 value = structured_content.get(key)
 
                 if isinstance(value, list):
-                    return [
-                        document
-                        for document in value
-                        if isinstance(document, dict)
-                    ]
+                    return [document for document in value if isinstance(document, dict)]
 
         if isinstance(structured_content, list):
-            return [
-                document
-                for document in structured_content
-                if isinstance(document, dict)
-            ]
+            return [document for document in structured_content if isinstance(document, dict)]
 
         documents: list[dict[str, Any]] = []
 
@@ -125,11 +117,7 @@ class MongoMCPMemoryClient:
             payload = cls._extract_untrusted_json(raw_text)
 
             if isinstance(payload, list):
-                documents.extend(
-                    document
-                    for document in payload
-                    if isinstance(document, dict)
-                )
+                documents.extend(document for document in payload if isinstance(document, dict))
             elif isinstance(payload, dict):
                 documents.append(payload)
 
@@ -145,11 +133,7 @@ class MongoMCPMemoryClient:
             flags=re.DOTALL,
         )
 
-        candidate = (
-            boundary_match.group(1).strip()
-            if boundary_match
-            else raw_text.strip()
-        )
+        candidate = boundary_match.group(1).strip() if boundary_match else raw_text.strip()
 
         try:
             return json.loads(candidate)

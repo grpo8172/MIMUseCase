@@ -15,7 +15,7 @@ class GkeSettings:
     node_pool_name: str = "default-pool"
 
     @classmethod
-    def from_env(cls) -> "GkeSettings":
+    def from_env(cls) -> GkeSettings:
         return cls(
             project_id=os.environ["GOOGLE_CLOUD_PROJECT"],
             location=os.environ["GKE_CLUSTER_LOCATION"],
@@ -38,9 +38,7 @@ def set_node_pool_size(node_count: int) -> dict:
         raise ValueError("Demo node count must be either 0 or 1.")
 
     settings = GkeSettings.from_env()
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
+    credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
     session = AuthorizedSession(credentials)
 
     name = _node_pool_name(settings)

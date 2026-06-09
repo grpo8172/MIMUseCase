@@ -24,6 +24,7 @@ def request_shutdown(*_: Any) -> None:
     SHUTDOWN_REQUESTED = True
     LOGGER.info("Shutdown requested. Finishing current operation.")
 
+
 def process_incident(incident: dict[str, Any]) -> None:
     incident_id = incident.get("incident_id", "unknown")
 
@@ -46,6 +47,7 @@ def process_incident(incident: dict[str, Any]) -> None:
             default=str,
         ),
     )
+
 
 def main() -> None:
     signal.signal(signal.SIGINT, request_shutdown)

@@ -12,8 +12,8 @@ from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
 
 def load_payload(path: str) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
-
+    with Path(path).open(encoding="utf-8") as payload_file:
+        return json.load(payload_file)
 
 def test_cyber_transformed_dataset_creates_kba_dip_action_plan() -> None:
     payload_path = Path("fixtures/payloads/incoming-cyber-app-exploit.json")
@@ -75,12 +75,8 @@ def test_cyber_transformed_dataset_executes_only_approved_action() -> None:
     state = ExecutionAgent().execute_approved_actions(state)
     state = ValidationAgent().validate(state)
 
-    succeeded = [
-        result for result in state.execution.results if result["status"] == "succeeded"
-    ]
-    skipped = [
-        result for result in state.execution.results if result["status"] == "skipped"
-    ]
+    succeeded = [result for result in state.execution.results if result["status"] == "succeeded"]
+    skipped = [result for result in state.execution.results if result["status"] == "skipped"]
 
     assert len(succeeded) == 1
     assert succeeded[0]["action_id"] == approved_action_id

@@ -5,12 +5,13 @@ from pathlib import Path
 
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
+def load_payload(path: str) -> dict[str, Any]:
+    with Path(path).open(encoding="utf-8") as payload_file:
+        return json.load(payload_file)
 
 def test_salesforce_action_plan_contains_gke_and_ansible_policy_metadata() -> None:
     payload = json.loads(
-        Path("fixtures/payloads/incoming-incident-salesforce-sso.json").read_text(
-            encoding="utf-8"
-        )
+        Path("fixtures/payloads/incoming-incident-salesforce-sso.json").read_text(encoding="utf-8")
     )
 
     coordinator = WorkflowCoordinatorAgent()

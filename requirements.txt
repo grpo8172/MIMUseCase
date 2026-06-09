@@ -23,4 +23,3 @@ google-auth
 requests
 pymongo>=4.6,<5
 
-redis

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import csv
 import json
 import os
 from pathlib import Path
 from typing import Any
-import csv
 
 from pymongo import MongoClient
 
@@ -18,6 +18,7 @@ FIXTURES_ROOT = Path("/app/fixtures")
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
+
 
 def load_csv(path: Path, limit: int = 0) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
@@ -84,15 +85,9 @@ def main() -> None:
 
         similar_incidents.extend(cyber_incidents)
 
-        print(
-            f"Loaded {len(cyber_incidents)} normalised cyber incidents "
-            "for MongoDB seeding."
-        )
+        print(f"Loaded {len(cyber_incidents)} normalised cyber incidents for MongoDB seeding.")
     else:
-        print(
-            "Cyber incident CSV not found. "
-            "Run scripts/normalize_cyber_events.py first."
-        )
+        print("Cyber incident CSV not found. Run scripts/normalize_cyber_events.py first.")
 
     dips_path = DATA_ROOT / "input" / "change_repository" / "dips.json"
     kbas_path = DATA_ROOT / "kbas" / "kba_seed.json"
@@ -102,11 +97,7 @@ def main() -> None:
     dips = load_json(dips_path) if dips_path.exists() else []
     kbas = load_json(kbas_path) if kbas_path.exists() else []
     policies = load_json(policies_path) if policies_path.exists() else []
-    validation_playbooks = (
-        load_json(playbooks_path)
-        if playbooks_path.exists()
-        else []
-    )
+    validation_playbooks = load_json(playbooks_path) if playbooks_path.exists() else []
 
     results = {
         "similar_incidents": upsert_documents(
@@ -118,22 +109,30 @@ def main() -> None:
             database["dips"],
             dips,
             "dip_id",
-        ) if dips else 0,
+        )
+        if dips
+        else 0,
         "kbas": upsert_documents(
             database["kbas"],
             kbas,
             "kba_id",
-        ) if kbas else 0,
+        )
+        if kbas
+        else 0,
         "execution_policies": upsert_documents(
             database["execution_policies"],
             policies,
             "policy_id",
-        ) if policies else 0,
+        )
+        if policies
+        else 0,
         "validation_playbooks": upsert_documents(
             database["validation_playbooks"],
             validation_playbooks,
             "playbook_id",
-        ) if validation_playbooks else 0,
+        )
+        if validation_playbooks
+        else 0,
     }
 
     print("MongoDB seed completed successfully.")

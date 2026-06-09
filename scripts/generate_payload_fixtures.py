@@ -13,6 +13,7 @@ from tests.factories.incident_factory import (
     build_vault_key_payload,
 )
 
+
 def write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

@@ -229,11 +229,7 @@ def write_payload_fixture(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
     app_exploit = next(
-        (
-            row
-            for row in rows
-            if row["category"] == "cyber_application_exploitation"
-        ),
+        (row for row in rows if row["category"] == "cyber_application_exploitation"),
         rows[0],
     )
 

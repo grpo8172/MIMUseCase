@@ -62,9 +62,7 @@ def build_analysed_workflow_state(
         seen_before_status=seen_before_status,
         recommended_kba_id=recommended_kba_id,
         recommended_resolver_group=recommended_resolver_group,
-        recommended_resolution_steps=[
-            "Updated SAML metadata and activated correct certificate"
-        ],
+        recommended_resolution_steps=["Updated SAML metadata and activated correct certificate"],
         recommended_validation_steps=[
             "Confirmed pilot login and auth failure rate returned to baseline"
         ],

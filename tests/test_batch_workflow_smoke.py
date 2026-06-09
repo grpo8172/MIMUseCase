@@ -4,52 +4,21 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from app.agents.execution_agent import ExecutionAgent
 from app.agents.validation_agent import ValidationAgent
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
 
 def load_payload(path: str) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    with Path(path).open(encoding="utf-8") as payload_file:
+        return json.load(payload_file)
 
 
-@pytest.mark.parametrize(
-    ("payload_path", "dataset_path"),
-    [
-        (
-            "fixtures/payloads/incoming-incident-salesforce-sso.json",
-            "data/generated/cyber_mim_incidents.csv",
-        ),
-        (
-            "fixtures/payloads/incoming-incident-vault-key.json",
-            "data/generated/cyber_mim_incidents.csv",
-        ),
-        (
-            "fixtures/payloads/incoming-incident-pipeline-failure.json",
-            "data/generated/cyber_mim_incidents.csv",
-        ),
-        (
-            "fixtures/payloads/incoming-cyber-app-exploit.json",
-            "data/generated/cyber_mim_incidents.csv",
-        ),
-    ],
-)
-def test_batch_workflow_handles_payloads_and_transformed_datasets(
-    payload_path: str,
-    dataset_path: str,
-) -> None:
-    if not Path(payload_path).exists():
-        pytest.skip(f"Missing payload fixture: {payload_path}")
-
-    if not Path(dataset_path).exists():
-        pytest.skip(f"Missing historical dataset: {dataset_path}")
-
-    payload = load_payload(payload_path)
+def test_salesforce_sso_happy_path_executes_uat_steps_in_order() -> None:
+    payload = load_payload("fixtures/payloads/incoming-incident-salesforce-sso.json")
 
     coordinator = WorkflowCoordinatorAgent(
-        dataset_path=dataset_path,
+        dataset_path="data/generated/cyber_mim_incidents.csv",
     )
 
     state = coordinator.create_workflow(payload)
@@ -57,26 +26,107 @@ def test_batch_workflow_handles_payloads_and_transformed_datasets(
     state = coordinator.retrieve_dip_context(state)
     state = coordinator.create_action_plan(state)
 
-    assert state.action_plan is not None
-    assert state.status in {"awaiting_approval", "action_plan_created"}
+    for action_id in [
+        "uat-step-1",
+        "uat-step-2",
+        "uat-step-3",
+        "uat-step-4",
+    ]:
+        state = coordinator.approve_action(state, action_id)
+        state = ExecutionAgent().execute_approved_actions(state)
 
-    proposed_actions = state.action_plan.get("proposed_actions", [])
-
-    if not proposed_actions:
-        assert "Manual review required" in state.action_plan["summary"]
-        return
-
-    approved_action_id = proposed_actions[min(2, len(proposed_actions) - 1)]["action_id"]
-
-    state = coordinator.approve_action(state, approved_action_id)
-    state = ExecutionAgent().execute_approved_actions(state)
     state = ValidationAgent().validate(state)
 
-    succeeded = [
-        result for result in state.execution.results if result["status"] == "succeeded"
+    results = workflow["execution"]["results"]
+
+    succeeded_action_ids = {
+        result["action_id"] for result in results if result["status"] == "succeeded"
+    }
+
+    assert {
+        "uat-step-1",
+        "uat-step-2",
+        "uat-step-3",
+        "uat-step-4",
+    }.issubset(succeeded_action_ids)
+
+    assert state.validation.status == "passed"
+
+
+def test_salesforce_step_3_can_be_rolled_back_with_separate_approval() -> None:
+    payload = load_payload("fixtures/payloads/incoming-incident-salesforce-sso.json")
+
+    coordinator = WorkflowCoordinatorAgent(
+        dataset_path="data/generated/cyber_mim_incidents.csv",
+    )
+
+    state = coordinator.create_workflow(payload)
+    state = coordinator.analyse(state)
+    state = coordinator.retrieve_dip_context(state)
+    state = coordinator.create_action_plan(state)
+
+    state = coordinator.approve_action(state, "uat-step-3")
+    state = ExecutionAgent().execute_approved_actions(state)
+
+    state = coordinator.create_rollback_action_plan(
+        state=state,
+        action_id="uat-step-3",
+    )
+
+    rollback_actions = [
+        action
+        for action in state.action_plan["proposed_actions"]
+        if action["action_id"] == "rollback-uat-step-3"
     ]
 
-    assert len(succeeded) == 1
-    assert succeeded[0]["action_id"] == approved_action_id
-    assert state.validation.status == "passed"
-    assert state.status == "validated"
+    assert len(rollback_actions) == 1
+    assert state.status == "awaiting_rollback_approval"
+
+    state = coordinator.approve_action(
+        state,
+        "rollback-uat-step-3",
+    )
+
+    state = ExecutionAgent().execute_approved_actions(state)
+
+    succeeded_action_ids = [
+        result["action_id"] for result in state.execution.results if result["status"] == "succeeded"
+    ]
+
+    assert "rollback-uat-step-3" in succeeded_action_ids
+    assert state.status in {
+        "rollback_completed",
+        "rollback_validated",
+    }
+
+
+def test_rollback_does_not_reexecute_forward_step_3() -> None:
+    coordinator = build_test_coordinator()
+
+    state = build_initial_state()
+
+    # Run the forward UAT workflow first.
+    state = coordinator.process(state)
+
+    step_3_results_before = [
+        result for result in state.execution.results if result["action_id"] == "uat-step-3"
+    ]
+
+    assert len(step_3_results_before) == 1
+    assert step_3_results_before[0]["status"] == "succeeded"
+
+    # Approve and execute only the rollback action.
+    state.execution.approved_action_ids.append("rollback-uat-step-3")
+    state = coordinator.process(state)
+
+    step_3_results_after = [
+        result for result in state.execution.results if result["action_id"] == "uat-step-3"
+    ]
+
+    rollback_results = [
+        result for result in state.execution.results if result["action_id"] == "rollback-uat-step-3"
+    ]
+
+    # The original action must not be executed for a second time.
+    assert len(step_3_results_after) == len(step_3_results_before)
+    assert len(rollback_results) == 1

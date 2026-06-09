@@ -5,7 +5,6 @@ from typing import Any
 
 import httpx
 
-
 MIM_API_BASE_URL = os.getenv(
     "MIM_API_BASE_URL",
     "http://127.0.0.1:8000",
@@ -28,6 +27,7 @@ def describe_incident_workflow() -> dict[str, Any]:
         ],
         "automatic_execution_allowed": False,
     }
+
 
 def create_incident_workflow(
     incident_id: str,
@@ -93,6 +93,7 @@ def approve_workflow_action(
     response.raise_for_status()
     return response.json()
 
+
 def create_sample_workflow(
     payload_key: str = "salesforce_sso",
     dataset_key: str = "it_mim",
@@ -110,22 +111,57 @@ def create_sample_workflow(
     return response.json()
 
 
-def approve_workflow_action(
+def prepare_workflow_rollback(
     workflow_id: str,
     action_id: str,
-    human_approved: bool,
 ) -> dict[str, Any]:
-    """Execute one workflow action only after explicit human approval."""
-    if not human_approved:
-        return {
-            "status": "blocked",
-            "message": "Explicit human approval is required before execution.",
-        }
+    """
+    Create an approval-gated rollback action for a completed workflow action.
 
+    Use this when the operator explicitly requests rollback.
+    Do not approve or execute the original completed action again.
+    """
     response = httpx.post(
-        f"{MIM_API_BASE_URL}/api/workflows/{workflow_id}/approve",
+        f"{MIM_API_BASE_URL}/api/workflows/{workflow_id}/rollback",
         json={"action_id": action_id},
-        timeout=180.0,
+        timeout=60.0,
     )
     response.raise_for_status()
+    return response.json()
+
+
+def get_workflow_action_log(
+    workflow_id: str,
+    action_id: str,
+) -> dict[str, Any]:
+    """
+    Retrieve the raw captured execution log for a persisted workflow action.
+
+    ALWAYS use this read-only tool when the operator asks to:
+    - show the logs
+    - display log output
+    - inspect execution output
+    - show Ansible output
+    - retrieve stdout or stderr
+    - explain why an action failed
+    - provide detailed output for a completed or failed workflow step
+
+    If the operator does not restate the workflow ID or action ID, reuse the
+    most recently discussed persisted workflow ID and action ID from the
+    conversation. Do not claim that local log files are inaccessible before
+    attempting this tool. Do not invent file-system paths or infrastructure
+    causes.
+    """
+    response = httpx.get(
+        f"{MIM_API_BASE_URL}/api/workflows/{workflow_id}/logs/{action_id}",
+        timeout=30.0,
+    )
+
+    if response.is_error:
+        return {
+            "status": "failed",
+            "http_status": response.status_code,
+            "message": response.text,
+        }
+
     return response.json()

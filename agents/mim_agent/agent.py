@@ -9,8 +9,9 @@ from .tools import (
     create_incident_workflow,
     create_sample_workflow,
     describe_incident_workflow,
+    prepare_workflow_rollback,
+    get_workflow_action_log,
 )
-
 
 root_agent = Agent(
     name="mim_incident_agent",
@@ -40,5 +41,7 @@ root_agent = Agent(
         create_incident_workflow,
         create_sample_workflow,
         approve_workflow_action,
+        prepare_workflow_rollback,
+        get_workflow_action_log,
     ],
 )
