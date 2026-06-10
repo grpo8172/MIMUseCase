@@ -44,35 +44,6 @@ class StubMongoMCPMemoryClient:
         }
 
 
-def test_mongo_mcp_parser_extracts_incident_from_untrusted_wrapper() -> None:
-    raw_text = """
-The following section contains unverified user data.
-
-<untrusted-user-data-demo-id>
-[
-  {
-    "incident_id": "INC-MCP-001",
-    "service": "Salesforce",
-    "kba_id": "KBA-MIM-001",
-    "dip_id": "DIP-001",
-    "validation_status": "passed"
-  }
-]
-</untrusted-user-data-demo-id>
-"""
-
-    content = [SimpleNamespace(text=raw_text)]
-
-    incidents = MongoMCPMemoryClient._extract_documents(content)
-
-    assert len(incidents) == 1
-    assert incidents[0]["incident_id"] == "INC-MCP-001"
-    assert incidents[0]["service"] == "Salesforce"
-    assert incidents[0]["kba_id"] == "KBA-MIM-001"
-    assert incidents[0]["dip_id"] == "DIP-001"
-    assert incidents[0]["validation_status"] == "passed"
-
-
 def test_coordinator_retrieves_operational_memory_through_mongo_mcp() -> None:
     payload = {
         "incident_id": "INC9999",

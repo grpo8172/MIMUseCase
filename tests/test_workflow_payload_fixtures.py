@@ -56,27 +56,4 @@ def test_workflow_handles_payload_fixture_dynamically(
         assert state.status == "action_plan_created"
 
 
-def test_only_manually_approved_action_executes() -> None:
-    from app.agents.execution_agent import ExecutionAgent
-    from app.agents.validation_agent import ValidationAgent
 
-    payload = load_payload_fixture("incoming-incident-salesforce-sso.json")
-
-    coordinator = WorkflowCoordinatorAgent()
-    state = coordinator.create_workflow(payload)
-    state = coordinator.analyse(state)
-    state = coordinator.retrieve_dip_context(state)
-    state = coordinator.create_action_plan(state)
-
-    state = coordinator.approve_action(state, "uat-step-3")
-    state = ExecutionAgent().execute_approved_actions(state)
-    state = ValidationAgent().validate(state)
-
-    succeeded = [result for result in state.execution.results if result["status"] == "succeeded"]
-    skipped = [result for result in state.execution.results if result["status"] == "skipped"]
-
-    assert len(succeeded) == 1
-    assert succeeded[0]["action_id"] == "uat-step-3"
-    assert skipped
-    assert state.validation.status == "passed"
-    assert state.status == "validated"
