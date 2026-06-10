@@ -1,0 +1,137 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: mim-live-private
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "1"
+        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/container-dependencies: '{"mongodb-mcp":["mongodb"],"mim-api":["mongodb","mongodb-mcp"],"mim-adk-web":["mim-api"]}'
+    spec:
+      serviceAccountName: mim-runtime@project-8ecd61cd-68ba-43c2-abd.iam.gserviceaccount.com
+      containerConcurrency: 1
+      timeoutSeconds: 300
+      containers:
+        - name: mim-adk-web
+          image: australia-southeast1-docker.pkg.dev/project-8ecd61cd-68ba-43c2-abd/mim-images/mim-api:latest
+          workingDir: /app/agents
+          ports:
+            - containerPort: 8080
+          command:
+            - adk
+          args:
+            - web
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+          env:
+            - name: PYTHONPATH
+              value: /app
+            - name: MIM_API_BASE_URL
+              value: http://127.0.0.1:8000
+            - name: GOOGLE_CLOUD_PROJECT
+              value: project-8ecd61cd-68ba-43c2-abd
+            - name: GOOGLE_CLOUD_LOCATION
+              value: global
+            - name: GOOGLE_GENAI_USE_VERTEXAI
+              value: "True"
+            - name: GEMINI_MODEL
+              value: gemini-3.1-flash-lite
+            - name: REAL_EXECUTION
+              value: "true"
+
+        - name: mim-api
+          image: australia-southeast1-docker.pkg.dev/project-8ecd61cd-68ba-43c2-abd/mim-images/mim-api:latest
+          command:
+            - sh
+          args:
+            - -c
+            - |
+              python /app/scripts/seed_mongodb.py
+              python - <<'PY'
+              from pymongo import MongoClient
+
+              db = MongoClient("mongodb://127.0.0.1:27017/mim")["mim"]
+
+              for name in [
+                  "dips",
+                  "kbas",
+                  "similar_incidents",
+                  "validation_playbooks",
+                  "execution_policies",
+              ]:
+                  print(f"VERIFY {name}={db[name].count_documents({})}", flush=True)
+
+              print(
+                  "VERIFY DIP-001=",
+                  db["dips"].find_one({"dip_id": "DIP-001"}),
+                  flush=True,
+              )
+              PY
+              exec python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+          env:
+            - name: PYTHONPATH
+              value: /app
+            - name: MONGODB_URI
+              value: mongodb://127.0.0.1:27017/mim
+            - name: MONGODB_DATABASE
+              value: mim
+            - name: MONGODB_MCP_URL
+              value: http://127.0.0.1:3000/mcp
+            - name: USE_MONGO_MCP
+              value: "true"
+            - name: REAL_EXECUTION
+              value: "true"
+            - name: HISTORICAL_INCIDENTS_PATH
+              value: /app/data/generated/cyber_mim_incidents.csv
+            - name: DIP_REPOSITORY_PATH
+              value: /app/data/input/change_repository/dips.json
+            - name: GOOGLE_CLOUD_PROJECT
+              value: project-8ecd61cd-68ba-43c2-abd
+            - name: CLOUDSDK_CORE_PROJECT
+              value: project-8ecd61cd-68ba-43c2-abd
+            - name: GKE_CLUSTER_NAME
+              value: mim-demo-cluster
+            - name: GKE_CLUSTER_LOCATION
+              value: australia-southeast1-a
+          startupProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 2
+            timeoutSeconds: 2
+            periodSeconds: 3
+            failureThreshold: 60
+
+        - name: mongodb-mcp
+          image: australia-southeast1-docker.pkg.dev/project-8ecd61cd-68ba-43c2-abd/mim-images/mongodb-mcp:latest
+          env:
+            - name: MDB_MCP_CONNECTION_STRING
+              value: mongodb://127.0.0.1:27017/mim?directConnection=true
+            - name: MDB_MCP_TRANSPORT
+              value: http
+            - name: MDB_MCP_HTTP_HOST
+              value: 0.0.0.0
+            - name: MDB_MCP_HTTP_PORT
+              value: "3000"
+            - name: MDB_MCP_READ_ONLY
+              value: "true"
+          startupProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 2
+            timeoutSeconds: 2
+            periodSeconds: 3
+            failureThreshold: 60
+            
+        - name: mongodb
+          image: mongo:7
+          startupProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 2
+            timeoutSeconds: 2
+            periodSeconds: 3
+            failureThreshold: 60

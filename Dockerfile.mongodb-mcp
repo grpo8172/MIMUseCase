@@ -1,0 +1,12 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+RUN npm install --global mongodb-mcp-server@latest
+
+ENV MDB_MCP_TRANSPORT=http \
+    MDB_MCP_HTTP_HOST=0.0.0.0 \
+    MDB_MCP_HTTP_PORT=3000 \
+    MDB_MCP_READ_ONLY=true
+
+CMD ["mongodb-mcp-server"]

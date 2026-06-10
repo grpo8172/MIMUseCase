@@ -36,9 +36,12 @@ RUN pip install --upgrade pip \
 
 COPY mim_pipeline_inspector.py /app/mim_pipeline_inspector.py
 COPY app /app/app
+COPY agents /app/agents
 COPY scripts /app/scripts
 COPY playbooks /app/playbooks
 COPY inventories /app/inventories
+COPY fixtures /app/fixtures
+COPY data /app/data
 
 RUN useradd --create-home --shell /bin/bash appuser \
     && chown -R appuser:appuser /app

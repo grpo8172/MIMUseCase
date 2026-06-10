@@ -5,14 +5,21 @@ from pathlib import Path
 from typing import Any
 
 
+import os
+from pathlib import Path
+
+
 class DIPRepository:
-    """Loads and searches local DIP/change artefacts.
+    """Loads and searches local DIP/change artefacts."""
 
-    Later this can be replaced by MongoDB MCP / MongoDB repository calls.
-    """
-
-    def __init__(self, path: str = "data/input/change_repository/dips.json") -> None:
-        self.path = Path(path)
+    def __init__(self, path: str | None = None) -> None:
+        self.path = Path(
+            path
+            or os.getenv(
+                "DIP_REPOSITORY_PATH",
+                "data/input/change_repository/dips.json",
+            )
+        )
 
     def load_all(self) -> list[dict[str, Any]]:
         if not self.path.exists():

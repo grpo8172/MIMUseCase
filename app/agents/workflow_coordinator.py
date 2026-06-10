@@ -142,14 +142,25 @@ class WorkflowCoordinatorAgent:
         return state
 
     def retrieve_dip_context(self, state: WorkflowState) -> WorkflowState:
-        matched_dips = self.dip_repository.find_by_kba(state.analysis.recommended_kba_id)
+        matched_dips = self.dip_repository.find_by_kba(
+            state.analysis.recommended_kba_id
+        )
+
+        if not matched_dips:
+            matched_dips = self.dip_repository.find_by_category_or_service(
+                service=state.incident.service,
+            )
 
         state.context.matched_dips = matched_dips
 
         if matched_dips:
-            state.notes.append(f"Matched {len(matched_dips)} DIP(s) from recommended KBA.")
+            state.notes.append(
+                f"Matched {len(matched_dips)} DIP(s) from KBA or service."
+            )
         else:
-            state.notes.append("No linked DIP found for recommended KBA.")
+            state.notes.append(
+                "No linked DIP found for recommended KBA or service."
+            )
 
         state.status = "context_retrieved"
         return state
