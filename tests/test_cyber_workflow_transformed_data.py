@@ -6,8 +6,6 @@ from typing import Any
 
 import pytest
 
-from app.agents.execution_agent import ExecutionAgent
-from app.agents.validation_agent import ValidationAgent
 from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 
 
