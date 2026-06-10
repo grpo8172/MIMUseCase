@@ -14,3 +14,16 @@ venv
 data/output/*
 *.log
 .DS_Store
+
+# Runtime data: do not include in Docker build context
+data/mongodb/
+
+# Runtime state and generated outputs
+data/mongodb/
+data/output/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.git/
+.venv/

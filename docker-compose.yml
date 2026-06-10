@@ -268,6 +268,7 @@ services:
     environment:
       PYTHONPATH: /app
       MIM_API_BASE_URL: http://mim-api:8000
+      REAL_EXECUTION: ${REAL_EXECUTION:-false}
 
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-australia-southeast1}

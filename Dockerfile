@@ -36,6 +36,7 @@ RUN pip install --upgrade pip \
 
 COPY mim_pipeline_inspector.py /app/mim_pipeline_inspector.py
 COPY app /app/app
+COPY scripts /app/scripts
 COPY playbooks /app/playbooks
 COPY inventories /app/inventories
 

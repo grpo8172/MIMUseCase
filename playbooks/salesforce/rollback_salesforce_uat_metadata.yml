@@ -1,4 +1,4 @@
-#Rollback
+# Rollback
 ---
 - name: Roll back Salesforce UAT metadata
   hosts: localhost
@@ -7,11 +7,19 @@
   vars:
     target_namespace: "{{ lookup('env', 'TARGET_NAMESPACE') | default('client-a-uat', true) }}"
     target_deployment: "{{ lookup('env', 'TARGET_DEPLOYMENT') | default('fake-auth-service', true) }}"
+    previous_certificate_fingerprint: "11:22:33:44:STALE"
+    previous_metadata_version: "v2"
 
   tasks:
     - name: Restore previous Salesforce metadata snapshot
-      ansible.builtin.debug:
-        msg: "Restored previous Salesforce vendor metadata snapshot."
+      ansible.builtin.command:
+        cmd: >
+          kubectl patch configmap salesforce-saml-active
+          -n {{ target_namespace }}
+          --type merge
+          -p '{"data":{"certificate_fingerprint":"{{ previous_certificate_fingerprint }}","metadata_version":"{{ previous_metadata_version }}"}}'
+      register: restore_result
+      changed_when: "'patched' in restore_result.stdout"
 
     - name: Restart fake authentication deployment
       ansible.builtin.command:
@@ -28,6 +36,20 @@
           --timeout=120s
       changed_when: false
 
+    - name: Read restored Salesforce metadata
+      ansible.builtin.command:
+        cmd: >
+          kubectl get configmap salesforce-saml-active
+          -n {{ target_namespace }}
+          -o jsonpath='{.data.certificate_fingerprint}'
+      register: restored_fingerprint
+      changed_when: false
+
     - name: Validate rollback completion
-      ansible.builtin.debug:
-        msg: "Rollback rollout is ready."
+      ansible.builtin.assert:
+        that:
+          - restored_fingerprint.stdout == previous_certificate_fingerprint
+        success_msg: "Rollback rollout is ready. Previous Salesforce vendor metadata snapshot restored."
+        fail_msg: >-
+          Rollback failed. Expected fingerprint {{ previous_certificate_fingerprint }},
+          but found {{ restored_fingerprint.stdout }}.

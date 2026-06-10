@@ -1,0 +1,70 @@
+---
+- name: Restore approved Kubernetes remediation capacity
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    target_cluster: "{{ lookup('env', 'TARGET_CLUSTER') | default('mim-demo-cluster', true) }}"
+    target_zone: "{{ lookup('env', 'TARGET_ZONE') | default('australia-southeast1-a', true) }}"
+    target_node_pool: "{{ lookup('env', 'TARGET_NODE_POOL') | default('default-pool', true) }}"
+    target_namespace: "{{ lookup('env', 'TARGET_NAMESPACE') | default('client-a-uat', true) }}"
+    target_deployment: "{{ lookup('env', 'TARGET_DEPLOYMENT') | default('fake-auth-service', true) }}"
+    desired_nodes: "{{ lookup('env', 'DESIRED_NODES') | default('1', true) }}"
+    desired_replicas: "{{ lookup('env', 'DESIRED_REPLICAS') | default('2', true) }}"
+
+  tasks:
+    - name: Restore GKE worker-node capacity
+      ansible.builtin.command:
+        cmd: >
+          gcloud container clusters resize {{ target_cluster }}
+          --zone {{ target_zone }}
+          --node-pool {{ target_node_pool }}
+          --num-nodes {{ desired_nodes }}
+          --quiet
+      changed_when: true
+
+    - name: Wait for worker nodes to become ready
+      ansible.builtin.command:
+        cmd: >
+          kubectl wait
+          --for=condition=Ready
+          node
+          --all
+          --timeout=300s
+      changed_when: false
+
+    - name: Scale deployment through Kubernetes API
+      ansible.builtin.command:
+        cmd: >
+          kubectl scale deployment {{ target_deployment }}
+          --replicas={{ desired_replicas }}
+          -n {{ target_namespace }}
+      changed_when: true
+
+    - name: Wait for rollout
+      ansible.builtin.command:
+        cmd: >
+          kubectl rollout status deployment/{{ target_deployment }}
+          -n {{ target_namespace }}
+          --timeout=180s
+      changed_when: false
+
+    - name: Show nodes
+      ansible.builtin.command:
+        cmd: kubectl get nodes -o wide
+      changed_when: false
+      register: node_output
+
+    - name: Print nodes
+      ansible.builtin.debug:
+        var: node_output.stdout_lines
+
+    - name: Show pods and node placement
+      ansible.builtin.command:
+        cmd: kubectl get pods -n {{ target_namespace }} -o wide
+      changed_when: false
+      register: pod_output
+
+    - name: Print pod placement
+      ansible.builtin.debug:
+        var: pod_output.stdout_lines

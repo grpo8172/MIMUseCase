@@ -1,6 +1,6 @@
 ## Local Demo Runbook
 
-The MIM demo uses several independent services. Starting MongoDB alone is not enough: the MongoDB MCP server, FastAPI backend, and ADK agent must also be running.
+The MIM demo uses several independent services which are interconnected and start up at the right queued times.
 
 ### Architecture
 
@@ -29,9 +29,10 @@ FastAPI approval endpoint
 ---
 
 ### Quick Start
-Make sure you have your own credentials:
+Make sure you have your own credentials and set your project ID:
 ```bash
 gcloud auth application-default login
+gcloud config set project your_project_id
 ```
 It will tell you where the credentials were saved to file. 
 
@@ -47,15 +48,37 @@ cp "$ADC_SOURCE" "$ADC_TARGET"
 chmod 600 "$ADC_TARGET"
 ```
 
+Feed Redis queue:
+```bash
+docker exec \
+  mim-incident-intelligence-normalized-incident-worker-1 \
+  sh -lc '
+    cd /app
+    PYTHONPATH=/app python scripts/publish_normalized_cyber_events.py \
+      --total-events 12 \
+      --min-delay-seconds 0.5 \
+      --max-delay-seconds 3 \
+      --burst-probability 0.4 \
+      --min-burst-size 2 \
+      --max-burst-size 4
+  '
+```
+
+Manually force cert to be stale live on powershell:
+```bash
+kubectl patch configmap salesforce-saml-active   -n client-a-uat   --type merge   -p '{"data":{"certificate_fingerprint":"11:22:33:44:STALE"}}'
+```
+
+Watch live interaction with shell environment:
+```bash
+kubectl get configmap salesforce-saml-active   -n client-a-uat   --watch   --output-watch-events   -o jsonpath='{.type}{" | "}{.object.metadata.resourceVersion}{" | "}{.object.data.certificate_fingerprint}{" | "}{.object.data.metadata_version}{"\n"}'
+```
+
 Start Everything:
 ```bash
 docker compose --profile adk-web up -d --build
 ```
-If the agent doesn't know context, seed the DB:
-```bash
-docker compose --profile seed run --rm mongodb-seed --build
-```
-```
+
 Check and confirm:
 ```bash
 docker compose exec mim-api sh -lc '
@@ -67,215 +90,25 @@ docker compose exec mim-api sh -lc '
 ```bash
 docker compose up -d --build
 ```
----
-
-## 1. Start MongoDB
-
-```bash
-cd ~/mim-incident-intelligence
-docker compose up -d mongodb
-docker compose ps
-```
-
----
-
-## 2. Start the MongoDB MCP server
-
-Run this in a separate terminal and leave it open:
-
-```bash
-cd ~/mim-incident-intelligence
-
-export MDB_MCP_CONNECTION_STRING="mongodb://127.0.0.1:27017/?directConnection=true"
-
-npx -y mongodb-mcp-server@latest \
-  --transport http \
-  --httpHost=127.0.0.1 \
-  --readOnly
-```
-
-Confirm the MCP server is listening:
-
-```bash
-ss -ltnp | grep ':3000'
-```
-
----
-
-## 3. Start FastAPI
-
-Run this in a separate terminal:
-
-```bash
-cd ~/mim-incident-intelligence
-source .venv/bin/activate
-
-export USE_MONGO_MCP=true
-export MONGODB_MCP_URL="http://127.0.0.1:3000/mcp"
-
-# Use false for safe local testing.
-# Use true only for controlled live GKE execution.
-export REAL_EXECUTION=false
-
-PYTHONPATH=. python -m uvicorn app.api.main:app \
-  --host 0.0.0.0 \
-  --port 8000
-```
-
-Confirm the API is reachable:
-
-```bash
-curl -s http://127.0.0.1:8000/api/health
-```
-
-Expected:
-
-```json
-{"status":"ok"}
-```
-
-Confirm the execution mode:
-
-```bash
-curl -s http://127.0.0.1:8000/api/options | python -m json.tool
-```
-
----
-
-## 4. Run the ADK agent
-
-Run this in a separate terminal:
-
-```bash
-cd ~/mim-incident-intelligence
-source .venv/bin/activate
-
-export GOOGLE_CLOUD_PROJECT="your_gcp_project_id"
-export GOOGLE_CLOUD_LOCATION="global"
-export GOOGLE_GENAI_USE_VERTEXAI="True"
-export GEMINI_MODEL="gemini-3.1-flash-lite"
-export MIM_API_BASE_URL="http://127.0.0.1:8000"
-
-cd agents
-adk run mim_agent
-```
 
 Use a single-line prompt in the CLI:
 
 ```text
-Create workflow for Incident ID INC9999, Service Salesforce, Short Description Users unable to login, Description Large group of users seeing SSO redirect loop after SAML certificate change, Severity SEV1, Priority P1. Retrieve operational memory and return the grounded action plan. Do not execute anything.
+I have an incoming Incident ID INC9999, Service Salesforce, Short Description Users unable to login, Description Large group of users seeing SSO redirect loop after SAML certificate change, Severity SEV1, Priority P1. 
 ```
 
----
-
-## 5. Enable controlled live GKE execution
-
-Restart FastAPI with:
-
+The GKE node pool may have been scaled to zero to reduce cost and 
+if the certificate is fresh it will not trigger drift so set up the
+env for demo purposes with this command:
 ```bash
-export REAL_EXECUTION=true
+ansible-playbook playbooks/salesforce/clean_environment_for_demo.yml
 ```
 
-Confirm:
-
+Run this when done for the day although there is autoscale so some
+things may come back up.
 ```bash
-curl -s http://127.0.0.1:8000/api/options | python -m json.tool
+ansible-playbook playbooks/salesforce/shut_down_k8s.yml
 ```
 
-Expected:
 
-```json
-"execution_mode": "real"
-```
 
-The GKE node pool may have been scaled to zero to reduce cost. If so, restore one worker node:
-
-```bash
-gcloud container clusters resize mim-demo-cluster \
-  --zone australia-southeast1-a \
-  --node-pool default-pool \
-  --num-nodes 1
-```
-
-Wait for the node to become ready:
-
-```bash
-kubectl get nodes -w
-```
-
-Check deployment status:
-
-```bash
-kubectl get pods \
-  -n client-a-uat \
-  -o wide
-```
-
-Approve an action using the explicit format:
-
-```text
-Approve workflow WF-INC9999 action uat-step-1. Set human_approved to true.
-```
-
----
-
-## Troubleshooting
-
-### `httpx.ConnectError: All connection attempts failed`
-
-MongoDB may be running while the separate MCP HTTP server is stopped.
-
-Check:
-
-```bash
-ss -ltnp | grep -E ':27017|:3000|:8000'
-```
-
-### `Blocked: GKE location is not whitelisted`
-
-Confirm the execution policy contains:
-
-```json
-"gke_location": "australia-southeast1-a"
-```
-
-Create a fresh workflow after updating the policy.
-
-### Rollout timeout: `0 of 2 updated replicas are available`
-
-Check:
-
-```bash
-kubectl get nodes
-kubectl get pods -n client-a-uat -o wide
-kubectl get events -n client-a-uat --sort-by='.lastTimestamp' | tail -n 40
-```
-
-If there are no worker nodes, resize the GKE node pool from `0` to `1`.
-
----
-
-## Shut down after the demo
-
-Scale the workload to zero:
-
-```bash
-kubectl scale deployment fake-auth-service \
-  --replicas=0 \
-  -n client-a-uat
-```
-
-Scale the node pool to zero:
-
-```bash
-gcloud container clusters resize mim-demo-cluster \
-  --zone australia-southeast1-a \
-  --node-pool default-pool \
-  --num-nodes 0
-```
-
-Execution logs are written under:
-
-```text
-data/output/execution_logs/
-```
