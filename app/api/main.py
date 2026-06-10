@@ -181,7 +181,6 @@ def list_mim_review_workflows() -> list[dict[str, Any]]:
         priority = incident.get("priority")
         classification = analysis.get("mim_classification")
         workflow_status = workflow.get("status")
-        action_plan_status = action_plan.get("status")
 
         requires_mim_review = priority in {"P1", "P2"} or classification in {
             "major_mim",

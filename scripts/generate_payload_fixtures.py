@@ -4,14 +4,14 @@ import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
-
 from tests.factories.incident_factory import (
     build_pipeline_failure_payload,
     build_salesforce_sso_payload,
     build_vault_key_payload,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 
 
 def write_json(path: Path, payload: dict[str, object]) -> None:
