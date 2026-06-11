@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import random
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -18,24 +20,47 @@ def load_events(input_file: str) -> list[dict[str, Any]]:
 
 
 def publish_event(
-    queue: RedisIncidentQueue,
+    queue: RedisIncidentQueue | None,
     incident: dict[str, Any],
     *,
     sequence_number: int,
+    api_url: str | None,
     burst_id: str | None = None,
 ) -> None:
-    payload = dict(incident)
+    if api_url:
+        body = json.dumps({"payload": incident}).encode("utf-8")
 
-    if burst_id:
-        payload["burst_id"] = burst_id
+        request = urllib.request.Request(
+            f"{api_url.rstrip('/')}/api/workflows",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
 
-    queue_length = queue.publish(payload)
+        with urllib.request.urlopen(request, timeout=30) as response:
+            if response.status not in {200, 201}:
+                raise RuntimeError(
+                    f"Hosted API returned HTTP {response.status}"
+                )
+
+        print(
+            f"Published {sequence_number}: "
+            f"{incident.get('incident_id')} "
+            f"(target=hosted-api, burst_id={burst_id or 'none'})"
+        )
+        return
+
+    if queue is None:
+        raise RuntimeError(
+            "Redis queue is required when --api-url is not set."
+        )
+
+    queue_length = queue.publish(incident)
 
     print(
         f"Queued {sequence_number}: "
-        f"{payload.get('incident_id', 'unknown')} "
-        f"(queue_length={queue_length}, "
-        f"burst_id={burst_id or 'none'})"
+        f"{incident.get('incident_id')} "
+        f"(queue_length={queue_length}, burst_id={burst_id or 'none'})"
     )
 
 
@@ -49,9 +74,10 @@ def publish_random_stream(
     min_burst_size: int,
     max_burst_size: int,
     seed: int | None,
+    api_url: str | None,
 ) -> None:
     rng = random.Random(seed)
-    queue = RedisIncidentQueue()
+    queue = None if api_url else RedisIncidentQueue()
     events = load_events(input_file)
 
     if not events:
@@ -83,6 +109,7 @@ def publish_random_stream(
                     queue,
                     incident,
                     sequence_number=published_count,
+                    api_url=api_url,
                     burst_id=burst_id,
                 )
 
@@ -97,6 +124,7 @@ def publish_random_stream(
                 queue,
                 incident,
                 sequence_number=published_count,
+                api_url=api_url,
             )
 
         if published_count < total_events:
@@ -112,6 +140,14 @@ def publish_random_stream(
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Publish a randomized stream of normalized cyber incidents."
+    )
+
+    parser.add_argument(
+        "--api-url",
+        help=(
+            "Optional hosted API base URL. "
+            "When set, publish via POST /api/workflows instead of Redis."
+        ),
     )
 
     parser.add_argument(
@@ -158,8 +194,6 @@ def main() -> None:
     parser.add_argument(
         "--seed",
         type=int,
-        default=None,
-        help="Set a seed to make the stream repeatable.",
     )
 
     args = parser.parse_args()
@@ -173,6 +207,7 @@ def main() -> None:
         min_burst_size=args.min_burst_size,
         max_burst_size=args.max_burst_size,
         seed=args.seed,
+        api_url=args.api_url,
     )
 
 

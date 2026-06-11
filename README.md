@@ -48,19 +48,9 @@ cp "$ADC_SOURCE" "$ADC_TARGET"
 chmod 600 "$ADC_TARGET"
 ```
 
-Feed Redis queue:
+Feed Redis queue to send normalized incidents straight to dashboard. 
 ```bash
-docker exec \
-  mim-incident-intelligence-normalized-incident-worker-1 \
-  sh -lc '
-    cd /app
-    PYTHONPATH=/app python scripts/publish_normalized_cyber_events.py \
-      --total-events 12 \
-      --min-delay-seconds 0.5 \
-      --max-delay-seconds 3 \
-      --burst-probability 0.4 \
-      --min-burst-size 2 \
-      --max-burst-size 4
+PYTHONPATH=. python scripts/publish_normalized_cyber_events.py   --api-url="${SAFE_API_URL}"   --total-events 12   --min-delay-seconds 0.5   --max-delay-seconds 3   --burst-probability 0.4   --min-burst-size 2   --max-burst-size 4
   '
 ```
 
@@ -68,6 +58,7 @@ Manually force cert to be stale live on powershell:
 ```bash
 kubectl patch configmap salesforce-saml-active   -n client-a-uat   --type merge   -p '{"data":{"certificate_fingerprint":"11:22:33:44:STALE"}}'
 ```
+
 
 Watch live interaction with shell environment:
 ```bash

@@ -12,7 +12,7 @@ services:
   # one-off Cloud Run Job after provisioning the external MongoDB database.
   # ---------------------------------------------------------------------------
   # 
-    mongodb:
+  mongodb:
     image: mongodb/mongodb-atlas-local:8.0
     hostname: mongodb
     container_name: mim-mongodb
