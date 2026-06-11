@@ -101,5 +101,7 @@ things may come back up.
 ansible-playbook playbooks/salesforce/shut_down_k8s.yml
 ```
 
+## License
 
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
