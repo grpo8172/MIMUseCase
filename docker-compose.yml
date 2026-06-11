@@ -11,23 +11,18 @@ services:
   # For the hosted deployment, use the same container entrypoint as a
   # one-off Cloud Run Job after provisioning the external MongoDB database.
   # ---------------------------------------------------------------------------
-  mongodb:
-    image: mongo:7
+  # 
+    mongodb:
+    image: mongodb/mongodb-atlas-local:8.0
+    hostname: mongodb
     container_name: mim-mongodb
     ports:
       - "27017:27017"
     volumes:
-      - ./data/mongodb:/data/db
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' | grep -q 1"
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 10s
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+      - mongodb-mongot:/data/mongot
+    restart: unless-stopped
 
   mongodb-seed:
     build:
@@ -481,3 +476,6 @@ services:
 
 volumes:
   mim-frontend-node-modules:
+  mongodb-data:
+  mongodb-config:
+  mongodb-mongot:

@@ -3,9 +3,10 @@ steps:
     args:
       - build
       - -f
-      - Dockerfile.mongodb-mcp
+      - Dockerfile
       - -t
       - ${_MCP_IMAGE}
       - .
 images:
   - ${_MCP_IMAGE}
+
