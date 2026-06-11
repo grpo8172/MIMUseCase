@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: mim-live-private
+  name: mim-demo-safe
 spec:
   template:
     metadata:
@@ -54,7 +54,7 @@ spec:
             - name: GEMINI_MODEL
               value: gemini-3.1-flash-lite
             - name: REAL_EXECUTION
-              value: "true"
+              value: "false"
 
         - name: mim-api
           image: australia-southeast1-docker.pkg.dev/project-8ecd61cd-68ba-43c2-abd/mim-images/mim-api:atlas-fix-20260611-001737
@@ -101,7 +101,7 @@ spec:
             - name: USE_MONGO_MCP
               value: "true"
             - name: REAL_EXECUTION
-              value: "true"
+              value: "false"
             - name: HISTORICAL_INCIDENTS_PATH
               value: /app/data/generated/cyber_mim_incidents.csv
             - name: DIP_REPOSITORY_PATH

@@ -13,11 +13,20 @@ from app.agents.workflow_coordinator import WorkflowCoordinatorAgent
 from app.api.execution import router as execution_router
 from app.models.workflow_state import WorkflowState
 from app.services.workflow_service import process_workflow
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="MIM Incident Intelligence API",
     description="API wrapper for payload analysis, KBA/DIP retrieval, approval, execution, and validation.",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 WORKFLOW_STORE: dict[str, WorkflowState] = {}
